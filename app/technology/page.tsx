@@ -13,6 +13,7 @@ export default function TechnologyPage() {
         <section className="about-section">
           <h2>Overview</h2>
           <p>LennyFighter is built entirely on Cloudflare&apos;s developer platform, running at the edge with zero origin servers.</p>
+          <p><a href="https://github.com/iglesiasbrandon/lennyfighter" target="_blank" rel="noopener noreferrer">View the source code on GitHub →</a></p>
         </section>
 
         {/* ARCHITECTURE */}
