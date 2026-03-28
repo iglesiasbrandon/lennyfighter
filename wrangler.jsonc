@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lennyfighter",
+  "compatibility_date": "2026-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./worker/index.ts",
+  "preview_urls": true,
+  "workers_dev": true,
+  "assets": {
+    "not_found_handling": "none",
+    "binding": "ASSETS"
+  },
+  "images": {
+    "binding": "IMAGES"
+  },
+
+  // D1 Database for ledger, players, transactions
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lennyfighter-db",
+      "database_id": "56bbd577-ba2f-4301-b27d-929476d50cb4"
+    }
+  ],
+
+  // KV for session cache
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "8be088351fbf4c2c9417da29e1299781"
+    }
+  ],
+
+  // Durable Objects for multiplayer
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MATCH_ROOM",
+        "class_name": "MatchRoom"
+      },
+      {
+        "name": "MATCHMAKING_QUEUE",
+        "class_name": "MatchmakingQueue"
+      }
+    ]
+  },
+
+  "routes": [
+    { "pattern": "lennyfighter.com", "custom_domain": true },
+    { "pattern": "www.lennyfighter.com", "custom_domain": true }
+  ],
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MatchRoom", "MatchmakingQueue"]
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["PlayerWallet"]  // Removed in payment system cleanup (2026-03)
+    }
+  ]
+}
