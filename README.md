@@ -4,8 +4,6 @@ A multiplayer trivia fighting game built on Cloudflare.
 
 **Live at [lennyfighter.com](https://lennyfighter.com)**
 
-![LennyFighter](screenshot.png)
-
 ## What is this?
 
 LennyFighter is a real-time 1v1 fighting game where players pick tech industry leaders as fighters and battle by answering trivia from their Lenny's Podcast interviews. Correct answers deal damage; wrong answers miss but deal recoil damage to yourself. Type matchups, stats, and items add strategic depth.
