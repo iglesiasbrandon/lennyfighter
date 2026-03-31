@@ -23,7 +23,7 @@ export default function TechnologyPage() {
             <li>Vinext (Cloudflare&apos;s React SSR framework)</li>
             <li>Cloudflare Workers (edge runtime)</li>
             <li>Durable Objects: MatchmakingQueue (pairs players), MatchRoom (battle state)</li>
-            <li>D1 (SQLite database for player stats, LennyCoin balances, transactions)</li>
+            <li>D1 (SQLite database for player stats, LennyCoin balances, item inventory)</li>
             <li>KV (session token cache with 1-hour TTL)</li>
             <li>WebSockets for real-time multiplayer with KV-backed token auth</li>
           </ul>
@@ -61,6 +61,8 @@ export default function TechnologyPage() {
             <li>Server-side damage calculation (clients cannot send arbitrary damage values)</li>
             <li>Parameterized SQL queries for all D1 operations</li>
             <li>Atomic LennyCoin transfers via D1 batch transactions</li>
+            <li>Fighter ID validation against server-side roster (clients cannot inject arbitrary stats)</li>
+            <li>Anti-spam turn locking prevents duplicate answers per turn</li>
           </ul>
         </section>
 
@@ -72,6 +74,8 @@ export default function TechnologyPage() {
             <li><strong>MatchRoom</strong> is a per-match Durable Object that holds authoritative battle state, processes turns, validates moves, and records results</li>
             <li>If a player disconnects, they get a <strong>20-second reconnection grace period</strong> before the match is forfeited</li>
             <li>WebSockets use hibernatable mode so idle connections do not consume billable duration</li>
+            <li>A <strong>wager negotiation phase</strong> lets both players bet LennyCoin before combat (15-second timeout, skipped if either has 0 LC)</li>
+            <li>An <strong>item selection phase</strong> occurs before the first turn when items are enabled (15-second timeout)</li>
           </ul>
         </section>
 
@@ -80,9 +84,9 @@ export default function TechnologyPage() {
           <h2>Data Model</h2>
           <ul>
             <li><strong>KV:</strong> Session tokens (keyed by UUID, value is gamertag, 1-hour TTL)</li>
-            <li><strong>D1:</strong> Player registration, win/loss stats, LennyCoin balances, item inventory, and transaction history</li>
+            <li><strong>D1:</strong> Player registration (<code>players</code>), win/loss stats and LennyCoin balances (<code>player_stats</code>), item inventory (<code>player_items</code>)</li>
             <li><strong>DO memory:</strong> Ephemeral match state (HP, turns, trivia, wagers) &mdash; not persisted after the match ends</li>
-            <li><strong>Client storage:</strong> Gamertag in localStorage, session token and match info in sessionStorage</li>
+            <li><strong>Client storage:</strong> Gamertag in localStorage; session token, active match info, and bot match state in sessionStorage</li>
           </ul>
         </section>
 
