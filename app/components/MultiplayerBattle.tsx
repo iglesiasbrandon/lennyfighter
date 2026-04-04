@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { Fighter, GameItem, InventoryEntry } from '../../lib/types';
+import type { InventoryEntry } from '../../lib/types';
 import type { MultiplayerBattleState } from '../hooks/useMultiplayer';
-import { getTypeMultiplier } from '../game/fighters';
 import { ItemSelector } from './ItemSelector';
 import { WagerNegotiation } from './WagerNegotiation';
+import { BattleArena } from './BattleArena';
 
 interface MultiplayerBattleProps {
   battleState: MultiplayerBattleState;
@@ -34,6 +34,10 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
   const [p1Anim, setP1Anim] = useState('');
   const [p2Anim, setP2Anim] = useState('');
   const [damagePopups, setDamagePopups] = useState<DamagePopup[]>([]);
+  const [showFight, setShowFight] = useState(false);
+  const [showKO, setShowKO] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const [showImpact, setShowImpact] = useState(false);
   const popupId = useRef(0);
   const hasEnded = useRef(false);
 
@@ -41,6 +45,42 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
   const isMyTurn = currentTurn === mySlot;
   const myFighter = mySlot === 'player1' ? player1?.fighter : player2?.fighter;
   const opponentFighter = mySlot === 'player1' ? player2?.fighter : player1?.fighter;
+
+  // Reset selected move to 0 at the start of each new turn
+  useEffect(() => {
+    if (isMyTurn && status === 'active') {
+      setSelectedMove(0);
+    }
+  }, [currentTurn, isMyTurn, status]);
+
+  // FIGHT! announcement when battle becomes active
+  useEffect(() => {
+    if (status === 'active') {
+      setShowFight(true);
+      const t = setTimeout(() => setShowFight(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [status]);
+
+  // K.O.! announcement
+  useEffect(() => {
+    if (status === 'finished' && winReason === 'ko') {
+      setShowKO(true);
+      const t = setTimeout(() => setShowKO(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [status, winReason]);
+
+  // Screen shake + impact flash on damage
+  useEffect(() => {
+    if (lastTurnResult && lastTurnResult.damage > 0) {
+      setShaking(true);
+      setShowImpact(true);
+      const t1 = setTimeout(() => setShaking(false), 300);
+      const t2 = setTimeout(() => setShowImpact(false), 150);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, [lastTurnResult]);
 
   // Animate turn results
   useEffect(() => {
@@ -127,15 +167,9 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
     );
   }
 
-  const p1HpPct = (player1.hp / player1.fighter.stats.hp) * 100;
-  const p2HpPct = (player2.hp / player2.fighter.stats.hp) * 100;
-  const hpClass = (pct: number) => pct > 50 ? '' : pct > 25 ? 'medium' : 'low';
-
   // Display: if I'm player2, visually swap so I'm always on the left
   const displayLeft = mySlot === 'player1' ? player1 : player2;
   const displayRight = mySlot === 'player1' ? player2 : player1;
-  const leftHpPct = mySlot === 'player1' ? p1HpPct : p2HpPct;
-  const rightHpPct = mySlot === 'player1' ? p2HpPct : p1HpPct;
   const leftAnim = mySlot === 'player1' ? p1Anim : p2Anim;
   const rightAnim = mySlot === 'player1' ? p2Anim : p1Anim;
 
@@ -167,87 +201,49 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
           <div className="hud-turn-indicator" aria-live="polite">
             {isMyTurn ? '⚔️ YOUR TURN' : '⏳ WAITING'}
           </div>
-          {status === 'active' && (
-            <button className="forfeit-btn" onClick={() => {
-              if (window.confirm('Forfeit the match? Your opponent wins.')) {
-                const opponentId = mySlot === 'player1' ? player2?.id : player1?.id;
-                onMatchEnd(opponentId || '', 'forfeit');
-              }
-            }}>Forfeit</button>
-          )}
         </div>
 
         {/* Main arena */}
         <div style={{ flex: 1 }}>
-          <div className="arena-container">
-            <div className="arena-bg" />
-            <div className="arena-circle-left" />
-            <div className="arena-circle-right" />
-
-            {/* Opponent HP box */}
-            <div className="hp-box opponent-box">
-              <span className="fighter-name">{displayRight.fighter.name.toUpperCase()}</span>
-              <span className={`hp-type-badge type-${displayRight.fighter.type}`}>{displayRight.fighter.type.toUpperCase()}</span>
-              <span className="level-badge">Lv1</span>
-              <div className="hp-box-gamertag">{displayRight.username}</div>
-              <div className="hp-bar-container">
-                <span className="hp-label">HP</span>
-                <div className="hp-bar-track" role="progressbar" aria-valuenow={displayRight.hp} aria-valuemin={0} aria-valuemax={displayRight.fighter.stats.hp} aria-label={`${displayRight.fighter.name} HP`}>
-                  <div className={`hp-bar-fill ${hpClass(rightHpPct)}`} style={{ width: `${rightHpPct}%` }} />
-                </div>
-              </div>
-              <div className="hp-numbers">{displayRight.hp} / {displayRight.fighter.stats.hp}</div>
-            </div>
-
-            {/* Player HP box */}
-            <div className="hp-box player-box">
-              <span className="fighter-name">{displayLeft.fighter.name.toUpperCase()}</span>
-              <span className="level-badge">Lv1</span>
-              <div className="hp-box-gamertag">{displayLeft.username}</div>
-              <div className="hp-bar-container">
-                <span className="hp-label">HP</span>
-                <div className="hp-bar-track" role="progressbar" aria-valuenow={displayLeft.hp} aria-valuemin={0} aria-valuemax={displayLeft.fighter.stats.hp} aria-label={`${displayLeft.fighter.name} HP`}>
-                  <div className={`hp-bar-fill ${hpClass(leftHpPct)}`} style={{ width: `${leftHpPct}%` }} />
-                </div>
-              </div>
-              <div className="hp-numbers">{displayLeft.hp} / {displayLeft.fighter.stats.hp}</div>
-            </div>
-
-            {/* Sprites */}
-            <div className="arena-fighters">
-              <div className={`arena-fighter player ${leftAnim} sprite-${displayLeft.fighter.type}`}>
-                <img className="fighter-sprite" src={displayLeft.fighter.avatar} alt={displayLeft.fighter.name} />
-              </div>
-              <div className={`arena-fighter opponent ${rightAnim} sprite-${displayRight.fighter.type}`}>
-                <img className="fighter-sprite" src={displayRight.fighter.avatar} alt={displayRight.fighter.name} />
-              </div>
-            </div>
-
-            {/* Damage popups */}
-            {damagePopups.map(p => (
-              <div key={p.id} className={`damage-popup ${p.correct ? 'correct' : ''}`} style={{ left: p.x, top: p.y }}>
-                -{p.value}
-              </div>
-            ))}
-
-            {/* Waiting for opponent's turn */}
-            {!isMyTurn && status === 'active' && (
-              <div className="waiting-overlay">
-                <div className="waiting-text">Opponent is thinking...</div>
-              </div>
-            )}
-
-            {/* Victory */}
-            {status === 'finished' && (
-              <div className="waiting-overlay">
-                <div className="waiting-text" style={{ fontSize: '20px', animation: 'none', opacity: 1 }}>
-                  {winner === (mySlot === 'player1' ? player1.id : player2.id)
-                    ? 'YOU WIN!'
-                    : 'YOU LOSE!'}
-                </div>
-              </div>
-            )}
-          </div>
+          <BattleArena
+            leftPlayer={{ fighter: displayLeft.fighter, hp: displayLeft.hp, maxHp: displayLeft.fighter.stats.hp, username: displayLeft.username }}
+            rightPlayer={{ fighter: displayRight.fighter, hp: displayRight.hp, maxHp: displayRight.fighter.stats.hp, username: displayRight.username }}
+            isMyTurn={isMyTurn}
+            turnNumber={battleState.turnNumber}
+            status={status}
+            trivia={trivia ? {
+              question: trivia.question,
+              options: trivia.options,
+              eliminatedOption: trivia.eliminatedOption,
+              revealedMoves: trivia.revealedMoves,
+            } : null}
+            selectedMove={selectedMove}
+            onSelectMove={setSelectedMove}
+            onAnswer={handleAnswer}
+            onForfeit={() => {
+              if (window.confirm('Forfeit the match? Your opponent wins.')) {
+                const opponentId = mySlot === 'player1' ? player2?.id : player1?.id;
+                onMatchEnd(opponentId || '', 'forfeit');
+              }
+            }}
+            canUseItem={canUseItem}
+            onUseItem={useItem}
+            leftAnim={leftAnim}
+            rightAnim={rightAnim}
+            damagePopups={damagePopups}
+            showFight={showFight}
+            showKO={showKO}
+            shaking={shaking}
+            showImpact={showImpact}
+            moves={myFighter?.moves ?? []}
+            opponentType={opponentFighter?.type ?? 'Growth'}
+            waitingMessage="Opponent is thinking..."
+            finishedMessage={
+              status === 'finished'
+                ? (winner === (mySlot === 'player1' ? player1.id : player2.id) ? 'YOU WIN!' : 'YOU LOSE!')
+                : undefined
+            }
+          />
 
           {/* Mobile HUD bar — visible only on mobile when sidebars are hidden */}
           <div className="mobile-hud">
@@ -262,79 +258,6 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
               <span>vs {(mySlot === 'player1' ? player2 : player1).username}</span>
             </div>
           </div>
-
-          {/* Move selection + Use Item button */}
-          {status === 'active' && isMyTurn && myFighter && (
-            <div className="move-select-row">
-              {myFighter.moves.map((move, i) => {
-                const mult = opponentFighter ? getTypeMultiplier(move.type, opponentFighter.type) : 1.0;
-                return (
-                  <button
-                    key={move.name}
-                    className={`move-btn ${selectedMove === i ? 'active' : ''}`}
-                    onClick={() => setSelectedMove(i)}
-                    aria-label={`Move: ${move.name}, Power: ${move.power}`}
-                  >
-                    {move.name} (PWR:{move.power})
-                    {mult > 1.0 && <span className="move-effectiveness super">&#9650; 1.5x</span>}
-                    {mult < 1.0 && <span className="move-effectiveness weak">&#9660; 0.67x</span>}
-                  </button>
-                );
-              })}
-              {canUseItem && (
-                <button
-                  className="move-btn"
-                  style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
-                  onClick={useItem}
-                >
-                  Use Item
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Revealed opponent moves (The Memo) */}
-          {trivia && trivia.revealedMoves && isMyTurn && status === 'active' && (
-            <div style={{ padding: '8px 12px', margin: '4px 0', backgroundColor: '#1e293b', border: '1px solid #3b82f6', borderRadius: '8px', fontSize: '24px', color: '#93c5fd' }}>
-              <strong>The Memo reveals opponent moves:</strong>{' '}
-              {trivia.revealedMoves.map((m, i) => (
-                <span key={i}>{i > 0 ? ', ' : ''}{m.name} (PWR:{m.power})</span>
-              ))}
-            </div>
-          )}
-
-          {/* Trivia */}
-          {trivia && isMyTurn && status === 'active' && (
-            <div className="question-panel">
-              <div className="question-left">
-                <div>
-                  <span className="question-counter">Turn {battleState.turnNumber}</span>
-                  <span className="question-difficulty">TRIVIA</span>
-                </div>
-                <div className="question-text">{trivia.question}</div>
-                <div className="enter-hint">Select your answer</div>
-              </div>
-              <div className="question-right">
-                {trivia.options.map((option, i) => {
-                  // Hook Model: hide eliminated option
-                  if (trivia.eliminatedOption === i) {
-                    return (
-                      <button key={i} className="answer-option" disabled style={{ opacity: 0.3, textDecoration: 'line-through', cursor: 'not-allowed' }} role="button" aria-label={`Answer ${i + 1}: ${option}`}>
-                        <span className="option-number">{i + 1}</span>
-                        {option}
-                      </button>
-                    );
-                  }
-                  return (
-                    <button key={i} className="answer-option" onClick={() => handleAnswer(option)} role="button" aria-label={`Answer ${i + 1}: ${option}`}>
-                      <span className="option-number">{i + 1}</span>
-                      {option}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Footer */}
           <div className="game-footer">
@@ -359,16 +282,17 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
           transform: 'translateX(-50%)',
           backgroundColor: '#a855f7',
           color: '#fff',
-          padding: '10px 24px',
+          padding: '8px 16px',
           borderRadius: '8px',
           fontSize: '14px',
           fontWeight: 600,
           zIndex: 1100,
           boxShadow: '0 4px 12px rgba(168, 85, 247, 0.5)',
           textAlign: 'center',
+          maxWidth: '90vw',
         }}>
           <div>{itemActivated.name}</div>
-          <div style={{ fontSize: '24px', opacity: 0.9, marginTop: '2px' }}>{itemActivated.description}</div>
+          <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>{itemActivated.description}</div>
         </div>
       )}
 
@@ -383,9 +307,13 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
             backgroundColor: '#2d2d4a',
             border: '1px solid #a855f7',
             borderRadius: '6px',
-            padding: '4px 10px',
-            fontSize: '24px',
+            padding: '4px 8px',
+            fontSize: '12px',
             color: '#c4b5fd',
+            maxWidth: '50vw',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}>
             Opponent item: {opponentPlayer.itemName}
           </div>

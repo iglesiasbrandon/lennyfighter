@@ -7,7 +7,7 @@ export default function TechnologyPage() {
   return (
     <>
       <NavBar />
-      <div className="about-container">
+      <main className="about-container">
 
         {/* OVERVIEW */}
         <section className="about-section">
@@ -90,7 +90,7 @@ export default function TechnologyPage() {
           </ul>
         </section>
 
-      </div>
+      </main>
     </>
   );
 }

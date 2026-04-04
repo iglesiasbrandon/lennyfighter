@@ -1,5 +1,5 @@
 import { getEnv } from '../../../../lib/env';
-import { successResponse, errorResponse, generateId } from '../../../../lib/utils';
+import { successResponse, errorResponse } from '../../../../lib/utils';
 import { getAllItems, getItemById, VALID_ITEM_IDS } from '../../../../lib/itemData';
 
 const MAX_ITEM_QUANTITY = 3;
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
   ).bind(body.gamertag).first<{ id: string }>();
 
   if (!player) {
-    // Auto-create a player record for this gamertag (no API key needed)
-    const playerId = generateId();
+    // Auto-create a player record for this gamertag
+    const playerId = crypto.randomUUID();
     await env.DB.prepare(
       'INSERT INTO players (id, username) VALUES (?, ?)'
     ).bind(playerId, body.gamertag).run();
@@ -93,7 +93,7 @@ async function completePurchase(
       ).bind(playerId, item.id)
     : env.DB.prepare(
         'INSERT INTO player_items (id, player_id, item_id, quantity) VALUES (?, ?, ?, 1)'
-      ).bind(generateId(), playerId, item.id);
+      ).bind(crypto.randomUUID(), playerId, item.id);
 
   const batchResults = await env.DB.batch([deductStmt, inventoryStmt]);
 

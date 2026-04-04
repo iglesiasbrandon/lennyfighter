@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import type { Env, Fighter, TriviaQuestion, GameItem } from '../lib/types';
 import { VALID_FIGHTER_IDS, getFighterById } from '../lib/fighterData';
 import { getItemById, VALID_ITEM_IDS } from '../lib/itemData';
-import { calculateDamage, getRandomTrivia } from '../lib/gameLogic';
+import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats } from '../lib/gameLogic';
 
 interface MatchPlayer {
   id: string;
@@ -154,7 +154,7 @@ export class MatchRoom extends DurableObject<Env> {
     // Upsert loser
     await db.prepare(
       `INSERT INTO player_stats (gamertag, losses, total_matches, win_streak, best_streak, last_fighter, last_match_at)
-       VALUES (?, 0, 1, 0, 0, ?, datetime('now'))
+       VALUES (?, 1, 1, 0, 0, ?, datetime('now'))
        ON CONFLICT(gamertag) DO UPDATE SET
          losses = losses + 1,
          total_matches = total_matches + 1,
@@ -276,38 +276,17 @@ export class MatchRoom extends DurableObject<Env> {
 
       if (item.timing !== 'pre_match') continue;
 
-      switch (item.effect) {
-        case 'atk_boost_def_penalty': {
-          const atkMult = 1 + (item.atkBoost || 0.30);
-          const defMult = 1 - (item.defPenalty || 0.15);
-          player.modifiedStats = {
-            atk: Math.round(player.fighter.stats.atk * atkMult),
-            def: Math.round(player.fighter.stats.def * defMult),
-          };
-          player.itemUsed = true;
-          this.broadcast({
-            type: 'item_activated',
-            playerId: player.id,
-            itemName: item.name,
-            description: item.description,
-          });
-          break;
-        }
-        case 'def_boost': {
-          const defMult = 1 + (item.defBoost || 0.30);
-          player.modifiedStats = {
-            atk: player.fighter.stats.atk,
-            def: Math.round(player.fighter.stats.def * defMult),
-          };
-          player.itemUsed = true;
-          this.broadcast({
-            type: 'item_activated',
-            playerId: player.id,
-            itemName: item.name,
-            description: item.description,
-          });
-          break;
-        }
+      const newStats = applyItemStats(player.fighter, item);
+      if (newStats) {
+        player.modifiedStats = newStats;
+        player.itemUsed = true;
+        this.broadcast({
+          type: 'item_activated',
+          playerId: player.id,
+          itemName: item.name,
+          description: item.description,
+        });
+      } else switch (item.effect) {
         case 'go_first': {
           state.currentTurn = slot;
           player.itemUsed = true;
@@ -449,37 +428,6 @@ export class MatchRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-
-    // Initialize match (REST endpoint -- optional, room auto-creates on WS connect)
-    if (url.pathname.endsWith('/init') && request.method === 'POST') {
-      let body: { matchId: string; itemsAllowed?: boolean };
-      try {
-        body = await request.json() as { matchId: string; itemsAllowed?: boolean };
-      } catch {
-        return Response.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
-      }
-      this.state = {
-        id: body.matchId,
-        player1: null,
-        player2: null,
-        currentTurn: 'player1',
-        turnNumber: 0,
-        status: 'waiting',
-        itemsAllowed: body.itemsAllowed ?? false,
-        usedTriviaIndices: {},
-      };
-      await this.saveState();
-      return Response.json({ success: true, data: { matchId: body.matchId } });
-    }
-
-    // Get match state
-    if (url.pathname.endsWith('/state')) {
-      const state = await this.loadState();
-      if (state) {
-        return Response.json({ success: true, data: state });
-      }
-      return Response.json({ success: false, error: 'No match' }, { status: 404 });
-    }
 
     // WebSocket upgrade for players
     if (request.headers.get('Upgrade') === 'websocket') {
@@ -907,8 +855,8 @@ export class MatchRoom extends DurableObject<Env> {
       defender.currentHp = Math.max(0, defender.currentHp - damage);
 
       // Self-damage on wrong answer
-      let selfDamage = 0;
-      if (!correct) {
+      let selfDamage = calculateSelfDamage(move.power, correct);
+      if (selfDamage > 0) {
         // Pivot Potion: block self-damage
         if (attacker.selectedItem && !attacker.itemUsed && attacker.selectedItem.effect === 'block_self_damage') {
           selfDamage = 0;
@@ -920,7 +868,6 @@ export class MatchRoom extends DurableObject<Env> {
             description: 'Self-damage blocked!',
           });
         } else {
-          selfDamage = Math.round(move.power * 0.5); // Wrong answer = significant recoil
           attacker.currentHp = Math.max(0, attacker.currentHp - selfDamage);
         }
       }

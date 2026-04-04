@@ -3,13 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GameItem, InventoryEntry } from '../../lib/types';
 import { getShopItems, purchaseItem, getInventory } from '../lib/api';
-
-const RARITY_COLORS: Record<string, string> = {
-  common: '#9ca3af',
-  uncommon: '#22c55e',
-  rare: '#3b82f6',
-  epic: '#a855f7',
-};
+import { RARITY_COLORS } from '../../lib/itemData';
 
 const MAX_QUANTITY = 3;
 
@@ -164,14 +158,14 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
   },
   modal: {
-    backgroundColor: '#2a2a2a',
-    border: '4px solid #c8a832',
+    backgroundColor: '#141422',
+    border: '3px solid #333',
     borderRadius: '8px',
-    width: '90%',
+    width: '94%',
     maxWidth: '900px',
-    maxHeight: '85vh',
+    maxHeight: '90vh',
     overflow: 'auto',
-    padding: '24px',
+    padding: '12px',
     position: 'relative',
     fontFamily: "'VT323', monospace",
   },
@@ -180,12 +174,12 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '16px',
     marginBottom: '20px',
-    borderBottom: '2px solid #c8a832',
+    borderBottom: '2px solid #333',
     paddingBottom: '16px',
   },
   title: {
     margin: 0,
-    color: '#e8d44d',
+    color: '#ffcc00',
     fontSize: '28px',
     fontWeight: 700,
     flex: 1,
@@ -207,18 +201,18 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '40px',
   },
   loadingText: {
-    color: '#c8a832',
+    color: '#ffcc00',
     fontSize: '22px',
     fontFamily: "'VT323', monospace",
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: '12px',
   },
   card: {
-    backgroundColor: '#1e1e1e',
-    border: '2px solid #555',
+    backgroundColor: '#0d1117',
+    border: '2px solid #333',
     borderRadius: '6px',
     padding: '16px',
     display: 'flex',
@@ -276,13 +270,13 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '6px',
   },
   costIcon: {
-    color: '#e8d44d',
+    color: '#ff6b35',
     fontWeight: 700,
     fontSize: '20px',
     fontFamily: "'VT323', monospace",
   },
   costAmount: {
-    color: '#e8d44d',
+    color: '#ff6b35',
     fontWeight: 700,
     fontSize: '20px',
     fontFamily: "'VT323', monospace",
@@ -294,7 +288,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'VT323', monospace",
   },
   buyBtn: {
-    backgroundColor: '#c8a832',
+    backgroundColor: '#ff6b35',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',

@@ -58,7 +58,7 @@ export function NavBar() {
       {gamertag ? (
         <div className="nav-user" ref={dropdownRef}>
           {coinBalance != null && (
-            <span style={{ color: '#d4a017', fontSize: '13px', fontWeight: 600, marginRight: '8px' }}>
+            <span style={{ color: '#ffcc00', fontSize: '12px', fontWeight: 600, marginRight: '6px' }}>
               {'\u{1FA99}'} {coinBalance}
             </span>
           )}

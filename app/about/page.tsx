@@ -18,7 +18,7 @@ export default function AboutPage() {
   return (
     <>
       <NavBar />
-      <div className="about-container">
+      <main className="about-container">
 
         {/* HOW TO PLAY */}
         <section className="about-section">
@@ -128,7 +128,7 @@ export default function AboutPage() {
           </ul>
         </section>
 
-      </div>
+      </main>
     </>
   );
 }

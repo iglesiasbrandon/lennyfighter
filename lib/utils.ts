@@ -1,7 +1,3 @@
-export function generateId(): string {
-  return crypto.randomUUID();
-}
-
 export function jsonResponse<T>(data: T, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,

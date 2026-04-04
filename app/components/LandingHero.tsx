@@ -30,14 +30,15 @@ export function LandingHero() {
   return (
     <div className="landing-container">
       <h1 className="landing-title">LENNYFIGHTER</h1>
+      <p style={{ fontFamily: "'Bebas Neue', Impact, sans-serif", color: '#ff6b35', letterSpacing: '4px', fontSize: '16px' }}>ENTER THE ARENA</p>
       <p className="landing-tagline">Battle for LennyCoin!</p>
 
       {hasExisting ? (
         <div className="landing-welcome">
-          <p>Welcome back, <strong>{gamertag}</strong></p>
+          <p>Welcome back, fighter <strong>{gamertag}</strong></p>
           <a href="/lobby" className="btn btn-primary landing-play-btn">Play</a>
           <button className="landing-change-btn" onClick={() => setHasExisting(false)}>
-            Change gamertag
+            CHANGE FIGHTER TAG
           </button>
         </div>
       ) : (
@@ -45,7 +46,7 @@ export function LandingHero() {
           <input
             className="landing-input"
             type="text"
-            placeholder="Enter your gamertag"
+            placeholder="INSERT GAMERTAG"
             value={gamertag}
             onChange={(e) => setGamertag(e.target.value)}
             maxLength={16}
@@ -53,7 +54,7 @@ export function LandingHero() {
           />
           {error && <p className="landing-error">{error}</p>}
           <button type="submit" className="btn btn-primary landing-play-btn">
-            Start Fighting
+            FIGHT!
           </button>
         </form>
       )}

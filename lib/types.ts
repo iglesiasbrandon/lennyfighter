@@ -1,12 +1,5 @@
 // Shared types for LennyFighter
 
-// ---- Player & Auth ----
-export interface Player {
-  id: string;
-  username: string;
-  created_at: string;
-}
-
 // ---- Game Types ----
 export type FighterType = 'Growth' | 'Engineering' | 'Design' | 'Data' | 'Product';
 

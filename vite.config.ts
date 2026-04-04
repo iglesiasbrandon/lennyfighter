@@ -8,8 +8,8 @@ import http from "http";
 import type { Duplex } from "stream";
 import { VALID_FIGHTER_IDS, getFighterById } from "./lib/fighterData";
 import { getItemById, VALID_ITEM_IDS } from "./lib/itemData";
-import { getTypeMultiplier, calculateDamage, getRandomTrivia } from './lib/gameLogic';
-import type { Fighter, Move, TriviaQuestion, GameItem } from './lib/types';
+import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats } from './lib/gameLogic';
+import type { Fighter, Move, GameItem } from './lib/types';
 
 // Prevent unhandled rejections from crashing the dev server
 function catchRejections(): Plugin {
@@ -199,38 +199,17 @@ function localMultiplayerWs(): Plugin {
           const item = player.selectedItem;
           if (item.timing !== 'pre_match') continue;
 
-          switch (item.effect) {
-            case 'atk_boost_def_penalty': {
-              const atkMult = 1 + (item.atkBoost || 0.30);
-              const defMult = 1 - (item.defPenalty || 0.15);
-              player.modifiedStats = {
-                atk: Math.round(player.fighter.stats.atk * atkMult),
-                def: Math.round(player.fighter.stats.def * defMult),
-              };
-              player.itemUsed = true;
-              broadcastToRoom(room, {
-                type: 'item_activated',
-                playerId: player.id,
-                itemName: item.name,
-                description: item.description,
-              });
-              break;
-            }
-            case 'def_boost': {
-              const defMult = 1 + (item.defBoost || 0.30);
-              player.modifiedStats = {
-                atk: player.fighter.stats.atk,
-                def: Math.round(player.fighter.stats.def * defMult),
-              };
-              player.itemUsed = true;
-              broadcastToRoom(room, {
-                type: 'item_activated',
-                playerId: player.id,
-                itemName: item.name,
-                description: item.description,
-              });
-              break;
-            }
+          const newStats = applyItemStats(player.fighter, item);
+          if (newStats) {
+            player.modifiedStats = newStats;
+            player.itemUsed = true;
+            broadcastToRoom(room, {
+              type: 'item_activated',
+              playerId: player.id,
+              itemName: item.name,
+              description: item.description,
+            });
+          } else switch (item.effect) {
             case 'go_first': {
               room.state.currentTurn = player.slot;
               player.itemUsed = true;
@@ -775,8 +754,8 @@ function localMultiplayerWs(): Plugin {
                 defenderArr.currentHp = Math.max(0, defenderArr.currentHp - damage);
 
                 // Self-damage on wrong answer
-                let selfDamage = 0;
-                if (!correct) {
+                let selfDamage = calculateSelfDamage(move.power, correct);
+                if (selfDamage > 0) {
                   // Pivot Potion: block self-damage
                   if (attacker.selectedItem && !attacker.itemUsed && attacker.selectedItem.effect === 'block_self_damage') {
                     selfDamage = 0;
@@ -788,7 +767,6 @@ function localMultiplayerWs(): Plugin {
                       description: 'Self-damage blocked!',
                     });
                   } else {
-                    selfDamage = Math.round(move.power * 0.5); // Wrong answer = significant recoil
                     attacker.currentHp = Math.max(0, attacker.currentHp - selfDamage);
                   }
                 }

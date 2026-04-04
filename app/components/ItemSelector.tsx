@@ -1,14 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { GameItem, InventoryEntry } from '../../lib/types';
-
-const RARITY_COLORS: Record<string, string> = {
-  common: '#9ca3af',
-  uncommon: '#22c55e',
-  rare: '#3b82f6',
-  epic: '#a855f7',
-};
+import type { InventoryEntry } from '../../lib/types';
+import { RARITY_COLORS } from '../../lib/itemData';
 
 const SELECTION_TIME = 15;
 
@@ -75,13 +69,13 @@ export function ItemSelector({ inventory, onSelect }: ItemSelectorProps) {
                 style={{
                   ...styles.timerBarFill,
                   width: `${timerPct}%`,
-                  backgroundColor: timeLeft <= 5 ? '#ef4444' : '#fbbf24',
+                  backgroundColor: timeLeft <= 5 ? '#ef4444' : '#ff6b35',
                 }}
               />
             </div>
             <span style={{
               ...styles.timerText,
-              color: timeLeft <= 5 ? '#ef4444' : '#fbbf24',
+              color: timeLeft <= 5 ? '#ef4444' : '#ff6b35',
             }}>
               {timeLeft}s
             </span>
@@ -115,10 +109,10 @@ export function ItemSelector({ inventory, onSelect }: ItemSelectorProps) {
                       style={{
                         ...styles.itemCard,
                         border: isSelected
-                          ? `2px solid ${RARITY_COLORS[entry.item.rarity]}`
+                          ? '2px solid #ff6b35'
                           : '2px solid #333',
                         boxShadow: isSelected
-                          ? `0 0 12px ${RARITY_COLORS[entry.item.rarity]}40`
+                          ? '0 0 12px rgba(255, 107, 53, 0.25)'
                           : 'none',
                       }}
                       onClick={() => setSelectedId(isSelected ? null : entry.item.id)}
@@ -175,14 +169,14 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
   },
   modal: {
-    backgroundColor: '#2a2a2a',
-    border: '4px solid #c8a832',
+    backgroundColor: '#141422',
+    border: '3px solid #333',
     borderRadius: '8px',
-    width: '90%',
+    width: '94%',
     maxWidth: '800px',
-    maxHeight: '80vh',
+    maxHeight: '85vh',
     overflow: 'auto',
-    padding: '24px',
+    padding: '12px',
     fontFamily: "'VT323', monospace",
   },
   header: {
@@ -190,14 +184,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: '20px',
-    borderBottom: '2px solid #c8a832',
+    borderBottom: '2px solid #333',
     paddingBottom: '16px',
     gap: '16px',
   },
   title: {
     margin: 0,
-    color: '#e8d44d',
-    fontSize: '28px',
+    color: '#ffcc00',
+    fontSize: '22px',
     fontWeight: 700,
     fontFamily: "'VT323', monospace",
   },
@@ -230,7 +224,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '40px 0',
   },
   confirmedText: {
-    color: '#e8d44d',
+    color: '#ffcc00',
     fontSize: '24px',
     fontWeight: 700,
     marginBottom: '12px',
@@ -252,21 +246,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+    gap: '10px',
     marginBottom: '20px',
   },
   itemCard: {
-    background: '#1e1e1e',
-    border: '2px solid #555',
+    background: '#0d1117',
+    border: '2px solid #333',
     borderRadius: '6px',
-    padding: '16px',
+    padding: '10px',
     cursor: 'pointer',
     textAlign: 'left',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '6px',
     transition: 'border-color 0.15s',
+    minHeight: '44px',
   },
   cardTop: {
     display: 'flex',
@@ -296,7 +291,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'VT323', monospace",
   },
   itemQty: {
-    color: '#e8d44d',
+    color: '#ffcc00',
     fontSize: '18px',
     fontWeight: 700,
     marginTop: 'auto',
@@ -319,7 +314,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: '44px',
   },
   readyBtn: {
-    backgroundColor: '#c8a832',
+    backgroundColor: '#ff6b35',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',

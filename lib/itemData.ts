@@ -146,3 +146,11 @@ export function getItemById(id: string): GameItem | undefined {
 export function getAllItems(): GameItem[] {
   return ITEMS;
 }
+
+/** Shared rarity color mapping. */
+export const RARITY_COLORS: Record<string, string> = {
+  common: '#9ca3af',
+  uncommon: '#22c55e',
+  rare: '#3b82f6',
+  epic: '#a855f7',
+};

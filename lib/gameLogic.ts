@@ -6,7 +6,7 @@
  * and ensures the local dev experience matches production behavior.
  */
 
-import type { Fighter, FighterType, TriviaQuestion } from './types';
+import type { Fighter, FighterType, TriviaQuestion, GameItem } from './types';
 
 // ---- Type Chart & Multiplier ----
 
@@ -77,6 +77,55 @@ export function calculateDamage(
     damage *= 2;
   }
   return damage;
+}
+
+// ---- Self-Damage Calculation ----
+
+/** The fraction of move power dealt as self-damage on a wrong answer. */
+export const SELF_DAMAGE_FRACTION = 0.5;
+
+/**
+ * Calculate the self-damage (recoil) a player takes for answering incorrectly.
+ *
+ * Returns 0 when the answer was correct.
+ */
+export function calculateSelfDamage(movePower: number, correct: boolean): number {
+  if (correct) return 0;
+  return Math.round(movePower * SELF_DAMAGE_FRACTION);
+}
+
+// ---- Pre-Match Item Stat Modifications ----
+
+/**
+ * Result of applying a pre-match item's stat modifications to a fighter.
+ * Returns null if no stat changes were made (no item, or item doesn't modify stats).
+ */
+export function applyItemStats(
+  fighter: Fighter,
+  item: GameItem | null | undefined,
+): { atk: number; def: number } | null {
+  if (!item) return null;
+  if (item.timing !== 'pre_match') return null;
+
+  switch (item.effect) {
+    case 'atk_boost_def_penalty': {
+      const atkMult = 1 + (item.atkBoost || 0.30);
+      const defMult = 1 - (item.defPenalty || 0.15);
+      return {
+        atk: Math.round(fighter.stats.atk * atkMult),
+        def: Math.round(fighter.stats.def * defMult),
+      };
+    }
+    case 'def_boost': {
+      const defMult = 1 + (item.defBoost || 0.30);
+      return {
+        atk: fighter.stats.atk,
+        def: Math.round(fighter.stats.def * defMult),
+      };
+    }
+    default:
+      return null;
+  }
 }
 
 // ---- Trivia Selection ----

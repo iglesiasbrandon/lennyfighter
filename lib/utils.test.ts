@@ -1,22 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateId, successResponse, errorResponse, jsonResponse } from './utils';
-
-// ---- generateId ----
-
-describe('generateId', () => {
-  it('returns a valid UUID format', () => {
-    const id = generateId();
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-    );
-  });
-
-  it('returns unique values on successive calls', () => {
-    const a = generateId();
-    const b = generateId();
-    expect(a).not.toBe(b);
-  });
-});
+import { successResponse, errorResponse, jsonResponse } from './utils';
 
 // ---- jsonResponse ----
 

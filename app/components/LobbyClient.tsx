@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { FIGHTERS } from '../game/fighters';
-import type { Fighter, GameItem, InventoryEntry } from '../../lib/types';
+import { FIGHTERS, getFighterById } from '../../lib/fighterData';
+import type { Fighter, InventoryEntry } from '../../lib/types';
 import { FighterSelect } from './FighterSelect';
 import { BattleView } from './BattleView';
 import { MultiplayerBattle } from './MultiplayerBattle';
@@ -10,8 +10,7 @@ import { ItemShop } from './ItemShop';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useMatchmaking, useMatchRoom, getActiveMatch, clearActiveMatch, getLocalGamertag, getBotMatch, clearBotMatch, saveBotMatch } from '../hooks/useMultiplayer';
 import type { MatchInfo } from '../hooks/useMultiplayer';
-import { getFighterById } from '../game/fighters';
-import { getInventory, getUsername } from '../lib/api';
+import { getInventory } from '../lib/api';
 
 interface BotMatchData {
   matchId: string;
@@ -56,15 +55,13 @@ export function LobbyClient() {
   const [inventory, setInventory] = useState<InventoryEntry[]>([]);
   const [itemsAllowed, setItemsAllowed] = useState(true);
   const [registered, setRegistered] = useState(true);
-  const [gamertag, setGamertag] = useState<string | null>(null);
   const [coinResult, setCoinResult] = useState<{ awarded: number; taken: number } | null>(null);
 
   // Check registration on mount + auto-open shop from nav
   useEffect(() => {
-    const localTag = getLocalGamertag() || getUsername();
+    const localTag = getLocalGamertag();
     if (localTag) {
       setRegistered(true);
-      setGamertag(localTag);
     } else {
       window.location.href = '/';
     }
@@ -201,7 +198,7 @@ export function LobbyClient() {
 
       {state === 'mode' && (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <h2 style={{ fontSize: '14px', color: '#3a2a0a', marginBottom: '24px' }}>Choose Battle Mode</h2>
+          <h2 style={{ fontSize: '28px', color: '#e0e0e0', marginBottom: '24px' }}>Choose Battle Mode</h2>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={startMultiplayer} style={{ padding: '20px 32px', fontSize: '24px' }}>
               Multiplayer<br />

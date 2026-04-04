@@ -1,5 +1,5 @@
 import './globals.css';
-import { RootErrorBoundary } from './components/RootErrorBoundary';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,12 +10,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>LennyFighter — Battle for LennyCoin</title>
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body>
-        <RootErrorBoundary>{children}</RootErrorBoundary>
+        <ErrorBoundary fallbackAction="reload">{children}</ErrorBoundary>
       </body>
     </html>
   );

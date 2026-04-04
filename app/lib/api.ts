@@ -23,11 +23,6 @@ export function getGamertag(): string | null {
   return localStorage.getItem(GAMERTAG_KEY);
 }
 
-export function getUsername(): string | null {
-  return getGamertag();
-}
-
-
 async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -43,10 +38,6 @@ async function apiFetch<T>(
   });
 
   return res.json() as Promise<ApiResponse<T>>;
-}
-
-export async function checkUsername(username: string) {
-  return apiFetch<{ available: boolean }>(`/players/check?username=${encodeURIComponent(username)}`);
 }
 
 // ---- Items ----

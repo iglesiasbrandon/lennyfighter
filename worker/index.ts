@@ -13,7 +13,6 @@
  * application code. Recommended configuration:
  *
  * 1. Unauthenticated endpoints — per-IP limits:
- *    - POST /api/v1/players (registration): 5 req/min per IP
  *    - GET /api/v1/items: 60 req/min per IP
  *
  * 2. Authenticated endpoints — per-gamertag/IP limits:

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { calculateDamage, getTypeMultiplier } from '../../lib/gameLogic';
+import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats } from '../../lib/gameLogic';
 import { ItemSelector } from './ItemSelector';
+import { BattleArena } from './BattleArena';
 import { consumeItem } from '../lib/api';
 import type { Fighter, Move, TriviaQuestion, GameItem, InventoryEntry } from '../../lib/types';
 
@@ -46,6 +47,8 @@ interface GameState {
   revealedMoves: Array<{ name: string; power: number; type: string }> | null;
   // Hook Model
   eliminatedOption: number | null;
+  // Track used trivia indices to avoid repeats
+  usedTriviaIndices: Record<string, number[]>;
 }
 
 interface DamagePopup {
@@ -76,15 +79,9 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
 
   // Apply pre-match stat modifications based on selected item
   const applyPreMatchStats = useCallback((fighter: Fighter, item: GameItem | null): Fighter => {
-    if (!item) return fighter;
-    const stats = { ...fighter.stats };
-    if (item.effect === 'atk_boost_def_penalty') {
-      stats.atk = Math.round(stats.atk * (1 + (item.atkBoost || 0)));
-      stats.def = Math.round(stats.def * (1 - (item.defPenalty || 0)));
-    } else if (item.effect === 'def_boost') {
-      stats.def = Math.round(stats.def * (1 + (item.defBoost || 0)));
-    }
-    return { ...fighter, stats };
+    const newStats = applyItemStats(fighter, item);
+    if (!newStats) return fighter;
+    return { ...fighter, stats: { ...fighter.stats, atk: newStats.atk, def: newStats.def } };
   }, []);
 
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -92,6 +89,8 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
     if (restoredGameState) {
       return restoredGameState as unknown as GameState;
     }
+    const usedTriviaIndices: Record<string, number[]> = {};
+    const initialTrivia = getRandomTrivia(player2.fighter, usedTriviaIndices);
     return {
     p1Hp: player1.fighter.stats.hp,
     p2Hp: player2.fighter.stats.hp,
@@ -99,7 +98,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
     p2MaxHp: player2.fighter.stats.hp,
     currentTurn: Math.random() < 0.5 ? 'player1' : 'player2',
     turnNumber: 1,
-    trivia: player2.fighter.trivia[0],
+    trivia: initialTrivia,
     selectedMove: 0,
     log: ['Battle Start!'],
     status: inventory.length > 0 ? 'item_select' : 'active',
@@ -115,6 +114,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
     stolenMove: null,
     revealedMoves: null,
     eliminatedOption: null,
+    usedTriviaIndices,
   }; });
 
   // Save game state to sessionStorage on every change (for page refresh restoration)
@@ -131,6 +131,10 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
   const [p2Anim, setP2Anim] = useState('');
   const [damagePopups, setDamagePopups] = useState<DamagePopup[]>([]);
   const [itemToast, setItemToast] = useState<{ name: string; description: string } | null>(null);
+  const [showFight, setShowFight] = useState(false);
+  const [showKO, setShowKO] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const [showImpact, setShowImpact] = useState(false);
 
   // Show item activation toast
   const showItemToast = useCallback((name: string, description: string) => {
@@ -312,7 +316,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
     }
 
     // Self-damage for wrong answer
-    let selfDamage = correct ? 0 : Math.round(move.power * 0.5);
+    let selfDamage = calculateSelfDamage(move.power, correct);
 
     // Pivot Potion: block self-damage once
     let pivotPotionActive = gameState.pivotPotionActive;
@@ -373,7 +377,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
           eliminatedOption: null,
         }));
         // Schedule bot turn
-        scheduleBotTurn(newP1Hp, newP2Hp, logEntry, pivotPotionActive, true);
+        scheduleBotTurn(newP1Hp, newP2Hp, pivotPotionActive, true);
         return;
       }
 
@@ -416,14 +420,14 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
       eliminatedOption: null,
     }));
 
-    scheduleBotTurn(newP1Hp, newP2Hp, logEntry, pivotPotionActive, gameState.bridgeRoundTriggered);
+    scheduleBotTurn(newP1Hp, newP2Hp, pivotPotionActive, gameState.bridgeRoundTriggered);
   // Note: scheduleBotTurn is declared after handleAnswer but called within it.
   // We use the function hoisting behavior of useCallback (it's assigned before the next render).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState, effectiveP1Fighter, player1, player2, onMatchEnd, calcDamage, showDamage, showItemToast, consumeSelectedItem, safeTimeout]);
 
   // Schedule the bot's turn after a delay
-  const scheduleBotTurn = useCallback((currentP1Hp: number, currentP2Hp: number, _logEntry: string, pivotPotionStillActive: boolean, bridgeAlreadyTriggered: boolean) => {
+  const scheduleBotTurn = useCallback((currentP1Hp: number, currentP2Hp: number, pivotPotionStillActive: boolean, bridgeAlreadyTriggered: boolean) => {
     safeTimeout(() => {
       const botMove = player2.fighter.moves[Math.floor(Math.random() * player2.fighter.moves.length)];
       const botCorrect = Math.random() < 0.6;
@@ -439,7 +443,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
         }
 
         const botDamage = calcDamage(botMove, effectiveBotCorrect, player2.fighter, effectiveP1Fighter, false);
-        const botSelfDamage = effectiveBotCorrect ? 0 : Math.round(botMove.power * 0.5);
+        const botSelfDamage = calculateSelfDamage(botMove.power, effectiveBotCorrect);
 
         let afterBotP1Hp = Math.max(0, currentP1Hp - botDamage);
         const afterBotP2Hp = Math.max(0, currentP2Hp - botSelfDamage);
@@ -467,7 +471,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
             if (prev.selectedItem) {
               consumeSelectedItem(prev.selectedItem);
             }
-            const nextTrivia = player2.fighter.trivia[Math.floor(Math.random() * player2.fighter.trivia.length)];
+            const nextTrivia = getRandomTrivia(player2.fighter, prev.usedTriviaIndices);
             // Apply Hook Model to new trivia
             let newEliminated: number | null = null;
             if (prev.selectedItem?.effect === 'eliminate_wrong_answer' && !prev.itemUsed) {
@@ -486,6 +490,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
               currentTurn: 'player1' as const,
               turnNumber: prev.turnNumber + 1,
               trivia: nextTrivia,
+              selectedMove: 0,
               log: [...prev.log, botLog],
               bridgeRoundTriggered: true,
               scopeCreepActive: scopeCreepTriggered ? false : prev.scopeCreepActive,
@@ -507,7 +512,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
           };
         }
 
-        const nextTrivia = player2.fighter.trivia[Math.floor(Math.random() * player2.fighter.trivia.length)];
+        const nextTrivia = getRandomTrivia(player2.fighter, prev.usedTriviaIndices);
 
         // Apply Hook Model to each new trivia question if item not yet consumed
         let newEliminated: number | null = null;
@@ -528,6 +533,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
           currentTurn: 'player1' as const,
           turnNumber: prev.turnNumber + 1,
           trivia: nextTrivia,
+          selectedMove: 0,
           log: [...prev.log, botLog],
           scopeCreepActive: scopeCreepTriggered ? false : prev.scopeCreepActive,
           eliminatedOption: newEliminated,
@@ -563,12 +569,47 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
   // Consume passive items (Pivot Potion, Bridge Round) -- these are consumed when they trigger,
   // handled in the battle logic above via consumeSelectedItem calls
 
+  // FIGHT! announcement when battle becomes active
+  useEffect(() => {
+    if (gameState.status === 'active') {
+      setShowFight(true);
+      const t = safeTimeout(() => setShowFight(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [gameState.status, safeTimeout]);
+
+  // K.O.! announcement
+  useEffect(() => {
+    if (gameState.status === 'finished') {
+      setShowKO(true);
+      const t = safeTimeout(() => setShowKO(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [gameState.status, safeTimeout]);
+
+  // Screen shake + impact flash on damage
+  const prevP1Hp = useRef(gameState.p1Hp);
+  const prevP2Hp = useRef(gameState.p2Hp);
+  useEffect(() => {
+    if (gameState.p1Hp < prevP1Hp.current || gameState.p2Hp < prevP2Hp.current) {
+      setShaking(true);
+      setShowImpact(true);
+      const t1 = safeTimeout(() => setShaking(false), 300);
+      const t2 = safeTimeout(() => setShowImpact(false), 150);
+      prevP1Hp.current = gameState.p1Hp;
+      prevP2Hp.current = gameState.p2Hp;
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+    prevP1Hp.current = gameState.p1Hp;
+    prevP2Hp.current = gameState.p2Hp;
+  }, [gameState.p1Hp, gameState.p2Hp, safeTimeout]);
+
   // If bot goes first, trigger the bot's turn when the game becomes active
   const botFirstTurnFired = useRef(false);
   useEffect(() => {
     if (gameState.status === 'active' && gameState.currentTurn === 'player2' && !botFirstTurnFired.current) {
       botFirstTurnFired.current = true;
-      scheduleBotTurn(gameState.p1Hp, gameState.p2Hp, 'Battle Start!', gameState.pivotPotionActive, false);
+      scheduleBotTurn(gameState.p1Hp, gameState.p2Hp, gameState.pivotPotionActive, false);
     }
   }, [gameState.status, gameState.currentTurn, gameState.p1Hp, gameState.p2Hp, gameState.pivotPotionActive, scheduleBotTurn]);
 
@@ -584,10 +625,6 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
       </div>
     );
   }
-
-  const p1HpPct = (gameState.p1Hp / gameState.p1MaxHp) * 100;
-  const p2HpPct = (gameState.p2Hp / player2.fighter.stats.hp) * 100;
-  const hpClass = (pct: number) => pct > 50 ? '' : pct > 25 ? 'medium' : 'low';
 
   return (
     <div className="game-wrapper">
@@ -627,93 +664,57 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
             }}>
               {gameState.selectedItem.name}
               {gameState.itemUsed && gameState.selectedItem.timing === 'active_use' && (
-                <span style={{ color: '#666', marginLeft: '4px' }}>(used)</span>
+                <span style={{ color: '#a0a0b0', marginLeft: '4px' }}>(used)</span>
               )}
             </div>
-          )}
-          {gameState.status === 'active' && (
-            <button className="forfeit-btn" onClick={() => {
-              if (window.confirm('Forfeit the match? The bot wins.')) {
-                onMatchEnd(player2.id, 'forfeit');
-              }
-            }}>Forfeit</button>
           )}
         </div>
 
         {/* Main arena + questions */}
         <div style={{ flex: 1 }}>
-          {/* Arena */}
-          <div className="arena-container">
-            <div className="arena-bg" />
-            <div className="arena-circle-left" />
-            <div className="arena-circle-right" />
-
-            {/* Opponent HP box (top-left of arena) */}
-            <div className="hp-box opponent-box">
-              <span className="fighter-name">{player2.fighter.name.toUpperCase()}</span>
-              <span className={`hp-type-badge type-${player2.fighter.type}`}>{player2.fighter.type.toUpperCase()}</span>
-              <span className="level-badge">Lv1</span>
-              <div className="fighter-title">{player2.fighter.title}</div>
-              <div className="hp-bar-container">
-                <span className="hp-label">HP</span>
-                <div className="hp-bar-track">
-                  <div className={`hp-bar-fill ${hpClass(p2HpPct)}`} style={{ width: `${p2HpPct}%` }} />
-                </div>
-              </div>
-              <div className="hp-numbers">{gameState.p2Hp} / {player2.fighter.stats.hp}</div>
-            </div>
-
-            {/* Player HP box */}
-            <div className="hp-box player-box">
-              <span className="fighter-name">{player1.fighter.name.toUpperCase()}</span>
-              <span className="level-badge">Lv1</span>
-              <div className="fighter-title">{player1.fighter.title}</div>
-              <div className="hp-bar-container">
-                <span className="hp-label">HP</span>
-                <div className="hp-bar-track">
-                  <div className={`hp-bar-fill ${hpClass(p1HpPct)}`} style={{ width: `${p1HpPct}%` }} />
-                </div>
-              </div>
-              <div className="hp-numbers">{gameState.p1Hp} / {gameState.p1MaxHp}</div>
-            </div>
-
-            {/* Fighter sprites */}
-            <div className="arena-fighters">
-              <div className={`arena-fighter player ${p1Anim} sprite-${player1.fighter.type}`}>
-                <img className="fighter-sprite" src={player1.fighter.avatar} alt={player1.fighter.name} />
-              </div>
-              <div className={`arena-fighter opponent ${p2Anim} sprite-${player2.fighter.type}`}>
-                <img className="fighter-sprite" src={player2.fighter.avatar} alt={player2.fighter.name} />
-              </div>
-            </div>
-
-            {/* Damage popups */}
-            {damagePopups.map(p => (
-              <div
-                key={p.id}
-                className={`damage-popup ${p.correct ? 'correct' : ''}`}
-                style={{ left: p.x, top: p.y }}
+          <BattleArena
+            leftPlayer={{ fighter: player1.fighter, hp: gameState.p1Hp, maxHp: gameState.p1MaxHp, username: 'You' }}
+            rightPlayer={{ fighter: player2.fighter, hp: gameState.p2Hp, maxHp: player2.fighter.stats.hp, username: 'Bot' }}
+            isMyTurn={gameState.currentTurn === 'player1'}
+            turnNumber={gameState.turnNumber}
+            status={gameState.status}
+            trivia={gameState.trivia ? {
+              question: gameState.trivia.question,
+              options: gameState.trivia.options,
+              eliminatedOption: gameState.eliminatedOption,
+              revealedMoves: gameState.revealedMoves,
+            } : null}
+            selectedMove={gameState.selectedMove}
+            onSelectMove={(i) => setGameState(prev => ({ ...prev, selectedMove: i }))}
+            onAnswer={handleAnswer}
+            onForfeit={() => {
+              if (window.confirm('Forfeit the match? The bot wins.')) {
+                onMatchEnd(player2.id, 'forfeit');
+              }
+            }}
+            canUseItem={!!canUseActiveItem}
+            onUseItem={handleUseItem}
+            extraMoveButtons={gameState.stolenMove ? (
+              <button
+                className="move-btn"
+                style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+                onClick={() => setGameState(prev => ({ ...prev, selectedMove: -1 }))}
               >
-                -{p.value}
-              </div>
-            ))}
-
-            {/* Waiting overlay */}
-            {gameState.currentTurn === 'player2' && gameState.status === 'active' && (
-              <div className="waiting-overlay">
-                <div className="waiting-text">Opponent is thinking...</div>
-              </div>
-            )}
-
-            {/* Victory overlay */}
-            {gameState.status === 'finished' && (
-              <div className="waiting-overlay">
-                <div className="waiting-text" style={{ fontSize: '20px', animation: 'none', opacity: 1 }}>
-                  {gameState.log[gameState.log.length - 1]}
-                </div>
-              </div>
-            )}
-          </div>
+                {gameState.stolenMove.name} (STOLEN, PWR:{gameState.stolenMove.power})
+              </button>
+            ) : undefined}
+            leftAnim={p1Anim}
+            rightAnim={p2Anim}
+            damagePopups={damagePopups}
+            showFight={showFight}
+            showKO={showKO}
+            shaking={shaking}
+            showImpact={showImpact}
+            moves={effectiveP1Fighter.moves}
+            opponentType={player2.fighter.type}
+            waitingMessage="Opponent is thinking..."
+            finishedMessage={gameState.status === 'finished' ? gameState.log[gameState.log.length - 1] : undefined}
+          />
 
           {/* Mobile HUD bar — visible only on mobile when sidebars are hidden */}
           <div className="mobile-hud">
@@ -728,91 +729,6 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
               <span>Turn {gameState.turnNumber}</span>
             </div>
           </div>
-
-          {/* Move selection + Use Item button */}
-          {gameState.status === 'active' && gameState.currentTurn === 'player1' && (
-            <div className="move-select-row">
-              {effectiveP1Fighter.moves.map((move, i) => {
-                const mult = getTypeMultiplier(move.type, player2.fighter.type);
-                return (
-                  <button
-                    key={move.name}
-                    className={`move-btn ${gameState.selectedMove === i ? 'active' : ''}`}
-                    onClick={() => setGameState(prev => ({ ...prev, selectedMove: i }))}
-                  >
-                    {move.name} (PWR:{move.power})
-                    {mult > 1.0 && <span className="move-effectiveness super">&#9650; 1.5x</span>}
-                    {mult < 1.0 && <span className="move-effectiveness weak">&#9660; 0.67x</span>}
-                  </button>
-                );
-              })}
-              {gameState.stolenMove && (
-                <button
-                  className="move-btn"
-                  style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
-                  onClick={() => setGameState(prev => ({ ...prev, selectedMove: -1 }))}
-                >
-                  {gameState.stolenMove.name} (STOLEN, PWR:{gameState.stolenMove.power})
-                </button>
-              )}
-              {canUseActiveItem && (
-                <button
-                  className="move-btn"
-                  style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
-                  onClick={handleUseItem}
-                >
-                  Use Item
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Revealed opponent moves (The Memo) */}
-          {gameState.revealedMoves && gameState.currentTurn === 'player1' && gameState.status === 'active' && (
-            <div style={{ padding: '8px 12px', margin: '4px 0', backgroundColor: '#1e293b', border: '1px solid #3b82f6', borderRadius: '8px', fontSize: '24px', color: '#93c5fd' }}>
-              <strong>The Memo reveals opponent moves:</strong>{' '}
-              {gameState.revealedMoves.map((m, i) => (
-                <span key={i}>{i > 0 ? ', ' : ''}{m.name} (PWR:{m.power})</span>
-              ))}
-            </div>
-          )}
-
-          {/* Trivia question panel */}
-          {gameState.trivia && gameState.currentTurn === 'player1' && gameState.status === 'active' && (
-            <div className="question-panel">
-              <div className="question-left">
-                <div>
-                  <span className="question-counter">Turn {gameState.turnNumber}</span>
-                  <span className="question-difficulty">TRIVIA</span>
-                </div>
-                <div className="question-text">{gameState.trivia.question}</div>
-                <div className="enter-hint">Select your answer</div>
-              </div>
-              <div className="question-right">
-                {gameState.trivia.options.map((option, i) => {
-                  // Hook Model: hide eliminated option
-                  if (gameState.eliminatedOption === i) {
-                    return (
-                      <button key={i} className="answer-option" disabled style={{ opacity: 0.3, textDecoration: 'line-through', cursor: 'not-allowed' }}>
-                        <span className="option-number">{i + 1}</span>
-                        {option}
-                      </button>
-                    );
-                  }
-                  return (
-                    <button
-                      key={i}
-                      className="answer-option"
-                      onClick={() => handleAnswer(option)}
-                    >
-                      <span className="option-number">{i + 1}</span>
-                      {option}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Footer */}
           <div className="game-footer">
@@ -845,16 +761,17 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
           transform: 'translateX(-50%)',
           backgroundColor: '#a855f7',
           color: '#fff',
-          padding: '10px 24px',
+          padding: '8px 16px',
           borderRadius: '8px',
           fontSize: '14px',
           fontWeight: 600,
           zIndex: 1100,
           boxShadow: '0 4px 12px rgba(168, 85, 247, 0.5)',
           textAlign: 'center',
+          maxWidth: '90vw',
         }}>
           <div>{itemToast.name}</div>
-          <div style={{ fontSize: '24px', opacity: 0.9, marginTop: '2px' }}>{itemToast.description}</div>
+          <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>{itemToast.description}</div>
         </div>
       )}
     </div>

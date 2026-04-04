@@ -31,9 +31,9 @@ export function FighterSelect({ fighters, selected, onSelect }: FighterSelectPro
           </div>
           {selected?.id === fighter.id && (
             <div style={{ marginTop: '10px' }}>
-              <div style={{ fontSize: '18px', color: '#888', marginBottom: '4px' }}>Moves:</div>
+              <div style={{ fontSize: '18px', color: '#aaa', marginBottom: '4px' }}>Moves:</div>
               {fighter.moves.map((m) => (
-                <div key={m.name} style={{ fontSize: '18px', color: '#444', marginBottom: '2px' }}>
+                <div key={m.name} style={{ fontSize: '18px', color: '#ccc', marginBottom: '2px' }}>
                   {m.name} (PWR:{m.power})
                 </div>
               ))}
@@ -49,8 +49,8 @@ function StatMini({ label, value, max }: { label: string; value: number; max: nu
   const pct = Math.min(100, (value / max) * 100);
   return (
     <div style={{ textAlign: 'left' }}>
-      <span style={{ fontSize: '18px', color: '#888' }}>{label}: </span>
-      <span style={{ fontSize: '18px', color: '#444' }}>{value}</span>
+      <span style={{ fontSize: '18px', color: '#aaa' }}>{label}: </span>
+      <span style={{ fontSize: '18px', color: '#ccc' }}>{value}</span>
       <div className="stat-mini-bar">
         <div className="stat-mini-fill" style={{ width: `${pct}%` }} />
       </div>

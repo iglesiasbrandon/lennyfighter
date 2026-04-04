@@ -2,21 +2,12 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { Fighter } from '../../lib/types';
-import { getGamertag, getUsername as getStoredUsername, getSessionToken, clearSessionToken } from '../lib/api';
+import { getGamertag, getSessionToken, clearSessionToken } from '../lib/api';
 
 const GAMERTAG_KEY = 'lennyfighter_gamertag';
 
 export function getLocalGamertag(): string | null {
-  if (typeof window === 'undefined') return null;
-  // Migrate legacy keys on read
-  const legacy = localStorage.getItem('lf_gamertag') || localStorage.getItem('username');
-  if (!localStorage.getItem(GAMERTAG_KEY) && legacy) {
-    localStorage.setItem(GAMERTAG_KEY, legacy);
-    localStorage.removeItem('lf_gamertag');
-    localStorage.removeItem('username');
-    return legacy;
-  }
-  return localStorage.getItem(GAMERTAG_KEY);
+  return getGamertag();
 }
 
 export function setLocalGamertag(tag: string): void {
@@ -43,10 +34,8 @@ function getPlayerId(): string {
 
 function getUsername(): string {
   if (typeof window === 'undefined') return '';
-  const localTag = getLocalGamertag();
-  if (localTag) return localTag;
-  const stored = getStoredUsername();
-  if (stored) return stored;
+  const tag = getLocalGamertag();
+  if (tag) return tag;
   // Session-stable fallback username
   let fallback = sessionStorage.getItem('lf_fallback_username');
   if (!fallback) {
