@@ -140,6 +140,7 @@ interface TurnResult {
   selfDamage: number;
   player1Hp: number;
   player2Hp: number;
+  correctAnswer?: string;
 }
 
 export function useMatchmaking(fighter: Fighter | null, initialMatchInfo?: MatchInfo | null) {
@@ -409,6 +410,7 @@ export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | nul
                 selfDamage: msg.selfDamage,
                 player1Hp: msg.player1Hp,
                 player2Hp: msg.player2Hp,
+                correctAnswer: msg.correctAnswer,
               },
             }));
             break;

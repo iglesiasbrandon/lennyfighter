@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { GameItem, InventoryEntry } from '../../lib/types';
-import { getShopItems, purchaseItem, getInventory } from '../lib/api';
+import { getShopItems, purchaseItem, getInventory, getGamertag } from '../lib/api';
 import { RARITY_COLORS } from '../../lib/itemData';
 
 const MAX_QUANTITY = 3;
@@ -13,6 +13,7 @@ export function ItemShop({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -43,6 +44,18 @@ export function ItemShop({ onClose }: { onClose: () => void }) {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const tag = getGamertag();
+    if (tag) {
+      fetch(`/api/v1/stats/${tag}`)
+        .then(r => r.json())
+        .then((json: any) => {
+          if (json.success && json.data) setBalance(json.data.lennycoins);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   function showToast(message: string, type: 'success' | 'error') {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -58,6 +71,10 @@ export function ItemShop({ onClose }: { onClose: () => void }) {
           ...prev,
           [item.id]: (prev[item.id] || 0) + 1,
         }));
+        const data = res.data as { remaining_coins?: number } | undefined;
+        if (data && typeof data.remaining_coins === 'number') {
+          setBalance(data.remaining_coins);
+        }
       } else {
         showToast(res.error?.message || 'Purchase failed', 'error');
       }
@@ -72,6 +89,7 @@ export function ItemShop({ onClose }: { onClose: () => void }) {
       <div style={styles.modal}>
         <div style={styles.header}>
           <h2 style={styles.title}>Item Shop</h2>
+          <span style={{ color: '#ffcc00', fontSize: '20px', fontFamily: "'VT323', monospace" }}>💰 {balance !== null ? `${balance} LC` : '...'}</span>
           <button style={styles.closeBtn} onClick={onClose}>X</button>
         </div>
 
@@ -84,10 +102,11 @@ export function ItemShop({ onClose }: { onClose: () => void }) {
             {items.map(item => {
               const owned = inventory[item.id] || 0;
               const atMax = owned >= MAX_QUANTITY;
-              const disabled = atMax || purchasing === item.id;
+              const unaffordable = balance !== null && balance < item.cost;
+              const disabled = atMax || unaffordable || purchasing === item.id;
 
               return (
-                <div key={item.id} style={styles.card}>
+                <div key={item.id} style={{ ...styles.card, ...(unaffordable ? { opacity: 0.5 } : {}) }}>
                   <div style={styles.cardHeader}>
                     <span style={styles.itemName}>{item.name}</span>
                     <span
@@ -123,7 +142,9 @@ export function ItemShop({ onClose }: { onClose: () => void }) {
                         ? 'Buying...'
                         : atMax
                           ? 'Max Owned'
-                          : 'Buy'}
+                          : unaffordable
+                            ? 'Not enough LC'
+                            : 'Buy'}
                     </button>
                   </div>
                 </div>

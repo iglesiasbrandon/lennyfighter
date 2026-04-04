@@ -530,6 +530,18 @@ a:hover { text-decoration: underline; }
 .answer-option:active {
   transform: scale(0.98);
 }
+.answer-option.answer-correct {
+  border-color: #00ff88 !important;
+  background: rgba(0, 255, 136, 0.15) !important;
+}
+.answer-option.answer-wrong {
+  border-color: #ff3333 !important;
+  background: rgba(255, 51, 51, 0.15) !important;
+}
+.answer-option.answer-dimmed {
+  opacity: 0.4;
+  pointer-events: none;
+}
 .answer-option .option-number {
   color: #fff;
   background: var(--gold-border);

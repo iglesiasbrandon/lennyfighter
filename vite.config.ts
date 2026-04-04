@@ -785,6 +785,7 @@ function localMultiplayerWs(): Plugin {
                   player1Hp: p1.currentHp,
                   player2Hp: p2.currentHp,
                   turnNumber: room.state.turnNumber,
+                  correctAnswer: room.state.currentTrivia?.answer,
                 });
 
                 // Check for KO with Bridge Round revival

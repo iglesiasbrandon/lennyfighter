@@ -135,6 +135,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
   const [showKO, setShowKO] = useState(false);
   const [shaking, setShaking] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
+  const [answerFeedback, setAnswerFeedback] = useState<{ selectedAnswer: string; correctAnswer: string; isCorrect: boolean } | null>(null);
 
   // Show item activation toast
   const showItemToast = useCallback((name: string, description: string) => {
@@ -297,6 +298,10 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
     if (gameState.status !== 'active' || gameState.currentTurn !== 'player1') return;
 
     const correct = answer === gameState.trivia?.answer;
+
+    // Set answer feedback for BattleArena to display
+    const correctAnswer = gameState.trivia?.answer ?? '';
+    setAnswerFeedback({ selectedAnswer: answer, correctAnswer, isCorrect: correct });
 
     // Determine the move to use
     let move: Move;
@@ -694,6 +699,8 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
             }}
             canUseItem={!!canUseActiveItem}
             onUseItem={handleUseItem}
+            answerFeedback={answerFeedback}
+            onFeedbackDone={() => setAnswerFeedback(null)}
             extraMoveButtons={gameState.stolenMove ? (
               <button
                 className="move-btn"

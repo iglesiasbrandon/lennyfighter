@@ -883,6 +883,7 @@ export class MatchRoom extends DurableObject<Env> {
         player1Hp: state.player1!.currentHp,
         player2Hp: state.player2!.currentHp,
         turnNumber: state.turnNumber,
+        correctAnswer: state.currentTrivia?.answer,
       });
 
       // Check for KO with Bridge Round revival

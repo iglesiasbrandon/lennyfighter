@@ -38,6 +38,8 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
   const [showKO, setShowKO] = useState(false);
   const [shaking, setShaking] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
+  const [answerFeedback, setAnswerFeedback] = useState<{ selectedAnswer: string; correctAnswer: string; isCorrect: boolean } | null>(null);
+  const pendingAnswerRef = useRef<string | null>(null);
   const popupId = useRef(0);
   const hasEnded = useRef(false);
 
@@ -116,8 +118,23 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
 
   const handleAnswer = useCallback((answer: string) => {
     if (!isMyTurn || status !== 'active') return;
+    pendingAnswerRef.current = answer;
     sendAnswer(answer, selectedMove);
   }, [isMyTurn, status, sendAnswer, selectedMove]);
+
+  // When turn_result arrives with correctAnswer, show feedback
+  useEffect(() => {
+    if (lastTurnResult?.correctAnswer && pendingAnswerRef.current) {
+      const selected = pendingAnswerRef.current;
+      const correct = lastTurnResult.correctAnswer;
+      setAnswerFeedback({
+        selectedAnswer: selected,
+        correctAnswer: correct,
+        isCorrect: selected === correct,
+      });
+      pendingAnswerRef.current = null;
+    }
+  }, [lastTurnResult]);
 
   // Wager negotiation phase
   if (battleState.wagerPhase) {
@@ -228,6 +245,8 @@ export function MultiplayerBattle({ battleState, connected, sendAnswer, onMatchE
             }}
             canUseItem={canUseItem}
             onUseItem={useItem}
+            answerFeedback={answerFeedback}
+            onFeedbackDone={() => setAnswerFeedback(null)}
             leftAnim={leftAnim}
             rightAnim={rightAnim}
             damagePopups={damagePopups}

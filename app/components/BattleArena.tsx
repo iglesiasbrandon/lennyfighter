@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getTypeMultiplier } from '../../lib/gameLogic';
 import type { Fighter, FighterType } from '../../lib/types';
 
@@ -42,6 +43,14 @@ export interface BattleArenaProps {
   canUseItem?: boolean;
   onUseItem?: () => void;
 
+  // Answer feedback (from turn_result or bot logic)
+  answerFeedback?: {
+    selectedAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  } | null;
+  onFeedbackDone?: () => void;
+
   // Extra move buttons (e.g. stolen move in BattleView)
   extraMoveButtons?: React.ReactNode;
 
@@ -76,6 +85,8 @@ export function BattleArena({
   onForfeit,
   canUseItem,
   onUseItem,
+  answerFeedback,
+  onFeedbackDone,
   extraMoveButtons,
   leftAnim,
   rightAnim,
@@ -91,6 +102,38 @@ export function BattleArena({
 }: BattleArenaProps) {
   const leftHpPct = (leftPlayer.hp / leftPlayer.maxHp) * 100;
   const rightHpPct = (rightPlayer.hp / rightPlayer.maxHp) * 100;
+
+  // Answer feedback display state
+  const [feedbackActive, setFeedbackActive] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<{ selectedAnswer: string; correctAnswer: string; isCorrect: boolean } | null>(null);
+  const [feedbackTrivia, setFeedbackTrivia] = useState<{ question: string; options: string[] } | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // When answerFeedback prop arrives, activate the feedback display
+  useEffect(() => {
+    if (answerFeedback) {
+      setFeedbackData(answerFeedback);
+      setFeedbackActive(true);
+      feedbackTimerRef.current = setTimeout(() => {
+        setFeedbackActive(false);
+        setFeedbackData(null);
+        setFeedbackTrivia(null);
+        onFeedbackDone?.();
+      }, 1500);
+    }
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    };
+  }, [answerFeedback, onFeedbackDone]);
+
+  // Wrap onAnswer to capture the selected answer and trivia options before they disappear
+  const handleAnswer = useCallback((answer: string) => {
+    if (feedbackActive) return; // Block clicks during feedback
+    if (trivia) {
+      setFeedbackTrivia({ question: trivia.question, options: [...trivia.options] });
+    }
+    onAnswer(answer);
+  }, [onAnswer, feedbackActive, trivia]);
 
   return (
     <>
@@ -205,8 +248,8 @@ export function BattleArena({
         </div>
       )}
 
-      {/* Trivia */}
-      {trivia && isMyTurn && status === 'active' && (
+      {/* Trivia — show normal trivia OR feedback state */}
+      {trivia && isMyTurn && status === 'active' && !feedbackActive && (
         <div className="question-panel">
           <div className="question-left">
             <div>
@@ -227,9 +270,46 @@ export function BattleArena({
                 );
               }
               return (
-                <button key={i} className="answer-option" onClick={() => onAnswer(option)} role="button" aria-label={`Answer ${i + 1}: ${option}`}>
+                <button key={i} className="answer-option" onClick={() => handleAnswer(option)} role="button" aria-label={`Answer ${i + 1}: ${option}`}>
                   <span className="option-number">{i + 1}</span>
                   {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Answer feedback overlay */}
+      {feedbackActive && feedbackData && feedbackTrivia && (
+        <div className="question-panel">
+          <div className="question-left">
+            <div>
+              <span className="question-counter">Turn {turnNumber}</span>
+              <span className="question-difficulty">{feedbackData.isCorrect ? 'CORRECT' : 'WRONG'}</span>
+            </div>
+            <div className="question-text">{feedbackTrivia.question}</div>
+            <div className="enter-hint">{feedbackData.isCorrect ? 'Nice one!' : `Answer: ${feedbackData.correctAnswer}`}</div>
+          </div>
+          <div className="question-right">
+            {feedbackTrivia.options.map((option, i) => {
+              const isSelected = option === feedbackData.selectedAnswer;
+              const isCorrectAnswer = option === feedbackData.correctAnswer;
+              let extraClass = '';
+              let indicator = '';
+              if (isCorrectAnswer) {
+                extraClass = 'answer-correct';
+                indicator = ' \u2713';
+              } else if (isSelected && !feedbackData.isCorrect) {
+                extraClass = 'answer-wrong';
+                indicator = ' \u2717';
+              } else {
+                extraClass = 'answer-dimmed';
+              }
+              return (
+                <button key={i} className={`answer-option ${extraClass}`} disabled role="button" aria-label={`Answer ${i + 1}: ${option}`}>
+                  <span className="option-number">{i + 1}</span>
+                  {option}{indicator}
                 </button>
               );
             })}
