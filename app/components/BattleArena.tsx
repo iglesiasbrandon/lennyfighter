@@ -143,6 +143,7 @@ export function BattleArena({
             <div className="sf-hp-name-row">
               <span className="sf-hp-name">{leftPlayer.fighter.name.toUpperCase()}</span>
               <span className={`hp-type-badge type-${leftPlayer.fighter.type}`}>{leftPlayer.fighter.type.toUpperCase()}</span>
+              <span className="sf-hp-gamertag">{leftPlayer.username}</span>
             </div>
             <div className="hp-bar-track" role="progressbar" aria-valuenow={leftPlayer.hp} aria-valuemin={0} aria-valuemax={leftPlayer.maxHp} aria-label={`${leftPlayer.fighter.name} health`}>
               <div className={`hp-bar-fill ${leftHpPct < 25 ? 'low' : leftHpPct < 50 ? 'medium' : ''}`} style={{ width: `${leftHpPct}%` }} />
@@ -154,8 +155,9 @@ export function BattleArena({
           </div>
           <div className="sf-hp-section sf-hp-right">
             <div className="sf-hp-name-row">
-              <span className="sf-hp-name">{rightPlayer.fighter.name.toUpperCase()}</span>
+              <span className="sf-hp-gamertag">{rightPlayer.username}</span>
               <span className={`hp-type-badge type-${rightPlayer.fighter.type}`}>{rightPlayer.fighter.type.toUpperCase()}</span>
+              <span className="sf-hp-name">{rightPlayer.fighter.name.toUpperCase()}</span>
             </div>
             <div className="hp-bar-track" role="progressbar" aria-valuenow={rightPlayer.hp} aria-valuemin={0} aria-valuemax={rightPlayer.maxHp} aria-label={`${rightPlayer.fighter.name} health`}>
               <div className={`hp-bar-fill ${rightHpPct < 25 ? 'low' : rightHpPct < 50 ? 'medium' : ''}`} style={{ width: `${rightHpPct}%` }} />
@@ -317,10 +319,21 @@ export function BattleArena({
         </div>
       )}
 
-      {/* Forfeit button */}
-      {status === 'active' && (
-        <button className="forfeit-btn" onClick={onForfeit}>Forfeit</button>
-      )}
+      {/* Game footer with forfeit */}
+      <div className="game-footer">
+        <div>
+          <h4>How to Play:</h4>
+          <ul>
+            <li>Click answers to respond</li>
+            <li>Select moves to attack</li>
+          </ul>
+        </div>
+        <div>
+          {status === 'active' && (
+            <button className="forfeit-btn" onClick={onForfeit}>Forfeit Match</button>
+          )}
+        </div>
+      </div>
     </>
   );
 }

@@ -127,16 +127,43 @@ export function LobbyClient() {
   const handleMatchEnd = useCallback((winnerId: string, reason: string) => {
     setResult({ winner: winnerId, reason });
     setState('result');
-    clearBotMatch(); // Clear saved bot match state
+    clearBotMatch();
 
-    // Stats are now recorded server-side in the MatchRoom Durable Object.
-    // Read coin results from battleState (sent via the match_end WS message).
-    const bs = battleStateRef.current;
-    setCoinResult({
-      awarded: bs.coinsAwarded ?? 0,
-      taken: bs.coinsTaken ?? 0,
-    });
-  }, []);
+    const botData = botMatchData;
+    if (botData) {
+      // Bot match — record stats via API since no DO is involved
+      const iWon = winnerId === 'player_self';
+      const tag = getLocalGamertag();
+      if (tag) {
+        fetch('/api/v1/stats/bot-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gamertag: tag,
+            won: iWon,
+            fighter: botData.player1.fighter.id,
+            opponentFighter: botData.player2.fighter.id,
+          }),
+        })
+          .then(r => r.json())
+          .then((json) => {
+            const resp = json as { success?: boolean; data?: { coinsAwarded: number; coinsTaken: number } };
+            if (resp.success && resp.data) {
+              setCoinResult({ awarded: resp.data.coinsAwarded, taken: resp.data.coinsTaken });
+            }
+          })
+          .catch(() => {});
+      }
+      setCoinResult({ awarded: 0, taken: 0 }); // Default until API responds
+    } else {
+      // Multiplayer match — coins come from the match_end WS message
+      const bs = battleStateRef.current;
+      setCoinResult({
+        awarded: bs.coinsAwarded ?? 0,
+        taken: bs.coinsTaken ?? 0,
+      });
+    }
+  }, [botMatchData]);
 
   const handlePlayAgain = useCallback(() => {
     resetMatchmaking();
