@@ -31,9 +31,10 @@ describe('FIGHTERS array', () => {
     }
   });
 
-  it('every fighter has exactly 4 trivia questions', () => {
+  it('every fighter has at least 4 trivia questions', () => {
     for (const f of FIGHTERS) {
-      expect(f.trivia).toHaveLength(4);
+      expect(f.trivia.length).toBeGreaterThanOrEqual(4);
+      expect(f.trivia.length).toBeLessThanOrEqual(10);
     }
   });
 

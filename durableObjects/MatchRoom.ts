@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { Env, Fighter, TriviaQuestion, GameItem } from '../lib/types';
-import { VALID_FIGHTER_IDS, getFighterById } from '../lib/fighterData';
+import { VALID_FIGHTER_IDS, getFighterById, FIGHTERS } from '../lib/fighterData';
 import { getItemById, VALID_ITEM_IDS } from '../lib/itemData';
 import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats } from '../lib/gameLogic';
 
@@ -391,7 +391,7 @@ export class MatchRoom extends DurableObject<Env> {
     const defenderSlot = attackerSlot === 'player1' ? 'player2' : 'player1';
     const defender = state[defenderSlot]!;
 
-    const trivia = getRandomTrivia(defender.fighter, state.usedTriviaIndices);
+    const trivia = getRandomTrivia(defender.fighter, state.usedTriviaIndices, FIGHTERS);
     state.currentTrivia = trivia;
 
     this.broadcast({ ...this.buildMatchStartPayload(state), wagerAmount: state.wagerAmount || 0 });
@@ -926,7 +926,7 @@ export class MatchRoom extends DurableObject<Env> {
         const nextDefenderSlot = nextAttackerSlot === 'player1' ? 'player2' : 'player1';
         const nextAttacker = state[nextAttackerSlot]!;
         const nextDefender = state[nextDefenderSlot]!;
-        const trivia = getRandomTrivia(nextDefender.fighter, state.usedTriviaIndices);
+        const trivia = getRandomTrivia(nextDefender.fighter, state.usedTriviaIndices, FIGHTERS);
         state.currentTrivia = trivia;
 
         // Check if next attacker has an active_use item available

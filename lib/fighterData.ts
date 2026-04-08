@@ -28,6 +28,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'In a product-led sales setup, who is primarily accountable for the sales pipeline?', options: ['Marketing team', 'Sales team', 'Product team', 'Customer support'], answer: 'Product team' },
       { question: 'Which best describes a risk of blending product-led growth and marketing-led sales without clear boundaries?', options: ['Enhanced customer experience', 'Disorganized collaboration', 'Increased revenue', 'Faster onboarding'], answer: 'Disorganized collaboration' },
       { question: 'Why is self-serve monetization capped around $10,000 in many SaaS products?', options: ['Limited credit card limits', 'Product can\'t handle more', 'Market demand drops after', 'Legal restrictions apply'], answer: 'Limited credit card limits' },
+      { question: 'What is a key consideration for companies implementing product-led sales effectively?', options: ['Separate teams with clear accountability', 'Default to traditional sales processes', 'Focus only on marketing', 'Avoid using data in decision making'], answer: 'Separate teams with clear accountability' },
     ],
 },
   {
@@ -48,6 +49,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'According to Nir Eyal, what primarily causes distraction?', options: ['Technology pings', 'Feeling and emotion', 'External interruptions', 'Poor time management'], answer: 'Feeling and emotion' },
       { question: 'What is a recommended approach to managing internal triggers that lead to distraction?', options: ['Ignore feelings', 'Identify and understand the emotion', 'Suppress emotions immediately', 'Distract with more tech'], answer: 'Identify and understand the emotion' },
       { question: 'Which best describes "traction" as used by Nir Eyal?', options: ['External notifications', 'Actions aligned with your intentions', 'Random distractions', 'Multitasking during work'], answer: 'Actions aligned with your intentions' },
+      { question: 'What is a nuanced strategy for improving focus that involves understanding the nature of distraction?', options: ['Reducing tech usage entirely', 'Reframing distraction as an action you control', 'Ignoring feelings of discomfort', 'Multitasking to handle interruptions'], answer: 'Reframing distraction as an action you control' },
     ],
 },
 
@@ -70,6 +72,11 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Which approach is suggested to manage constant busyness in a product role?', options: ['Implement more productivity tools', 'Prioritize tasks better', 'Limit scope or focus on core work', 'Reduce meetings'], answer: 'Limit scope or focus on core work' },
       { question: 'According to Shreyas, what is a long-term solution to avoid burnout despite productivity tricks?', options: ['Work longer hours', 'Automate everything', 'Cap or reduce scope', 'Hire more people'], answer: 'Cap or reduce scope' },
       { question: 'What is a core question product leaders should ask to improve their effectiveness?', options: ['Am I using the latest tech?', 'Are all stakeholders aligned?', 'Is my scope manageable?', 'Have I set ambitious goals?'], answer: 'Is my scope manageable?' },
+      { question: 'What is a pre-mortem in product management?', options: ['A post-launch review', 'A proactive failure analysis', 'A customer feedback session', 'A competitor analysis'], answer: 'A proactive failure analysis' },
+      { question: 'Which is an effective use of a product manager\'s time?', options: ['Writing code', 'Handling customer support', 'Aligning strategy and prioritization', 'Designing UI'], answer: 'Aligning strategy and prioritization' },
+      { question: 'How do the three levels of product work often impact team dynamics?', options: ['They streamline decision making', 'Getting them wrong can cause tension', 'They eliminate strategic conflicts', 'They simplify project scope'], answer: 'Getting them wrong can cause tension' },
+      { question: 'Why are most execution problems actually strategy problems?', options: ['Lack of resources', 'Poor team communication', 'Misaligned strategic focus', 'Insufficient training'], answer: 'Misaligned strategic focus' },
+      { question: 'What is a common pitfall in prioritization?', options: ['Ignoring customer needs', 'Focusing only on short-term gains', 'Prioritizing based on data', 'Overthinking technical constraints'], answer: 'Ignoring customer needs' },
     ],
 },
   {
@@ -90,6 +97,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Which approach best helps a product team shift towards being more empowered?', options: ['Clear strategic goals and autonomy', 'More detailed project plans', 'Frequent status reporting', 'Increasing stakeholder control'], answer: 'Clear strategic goals and autonomy' },
       { question: 'What is a common mistake made by companies hiring product managers during the pandemic?', options: ['Hiring too many software engineers', 'Overhiring roles like product owners and analysts', 'Focusing only on technical skills', 'Reducing product management headcount'], answer: 'Overhiring roles like product owners and analysts' },
       { question: 'How can product managers avoid becoming "product management theater"?', options: ['Focus on delivering outcomes over output', 'Increase the number of meetings', 'Prioritize feature delivery speed', 'Reduce customer involvement'], answer: 'Focus on delivering outcomes over output' },
+      { question: 'What is a nuanced strategy for ensuring a product team stays aligned with best practices used by successful companies?', options: ['Carefully vet techniques through proven use', 'Adopt new methods immediately', 'Replicate competitors exactly', 'Minimize experimentation'], answer: 'Carefully vet techniques through proven use' },
     ],
 },
   {
@@ -110,6 +118,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Which aspect of product management does the opportunity space emphasize?', options: ['Executing solutions quickly', 'Understanding customer needs', 'Optimizing feature releases', 'Managing engineering tasks'], answer: 'Understanding customer needs' },
       { question: 'What is a common mistake teams make when defining opportunities?', options: ['Writing them as solutions', 'Ignoring customer feedback', 'Focusing only on competitors', 'Overanalyzing data'], answer: 'Writing them as solutions' },
       { question: 'How can teams manage the discomfort of staying in the opportunity (problem) space?', options: ['Rely on intuition', 'Strictly follow leadership', 'Practice framing problems well', 'Skip directly to solutions'], answer: 'Practice framing problems well' },
+      { question: 'What is a recommended approach for structuring the opportunity space for a streaming entertainment product?', options: ['List all features first', 'Use an experience map from customer view', 'Focus on technical feasibility', 'Prioritize competitor comparisons'], answer: 'Use an experience map from customer view' },
     ],
 },
 
@@ -132,6 +141,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Why does Brian Chesky emphasize knowing the details in a product-driven company?', options: ['To micromanage team members', 'To ensure the product is market-aligned', 'To control engineering decisions', 'To avoid broad strategic planning'], answer: 'To ensure the product is market-aligned' },
       { question: 'In Airbnb\'s new structure, what is the primary role of senior product marketers?', options: ['Control design decisions', 'Manage engineering teams', 'Talk effectively about the product', 'Set company strategy'], answer: 'Talk effectively about the product' },
       { question: 'What approach does Airbnb now favor for growth over traditional channels?', options: ['Paid advertising', 'Viral marketing', 'Building the best product', 'Expanding sales teams'], answer: 'Building the best product' },
+      { question: 'What is a nuanced benefit of managing by influence rather than control, according to Chesky?', options: ['Requires frequent meetings', 'Builds a culture of trust', 'Eliminates need for leadership', 'Reduces autonomy'], answer: 'Builds a culture of trust' },
     ],
 },
   {
@@ -152,6 +162,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Why should product teams prioritize getting to market faster?', options: ['To beat competitors', 'To validate ideas quickly', 'To increase sales immediately', 'To avoid development costs'], answer: 'To validate ideas quickly' },
       { question: 'How can making a product more engaging by adding "fun" differentiate it?', options: ['It reduces development time', 'It creates a distinct emotional connection', 'It decreases user support costs', 'It simplifies design'], answer: 'It creates a distinct emotional connection' },
       { question: 'Why should organizations continuously adapt their processes as models improve?', options: ['To lower operational costs', 'To leverage increased productivity', 'To reduce headcount', 'To eliminate innovation'], answer: 'To leverage increased productivity' },
+      { question: 'What is an effective way to keep a team motivated after a major deal falls through?', options: ['Implement punitive measures', 'Focus on process improvement', 'Reaffirm vision and next steps', 'Reduce communication'], answer: 'Reaffirm vision and next steps' },
     ],
 },
   {
@@ -172,6 +183,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Which term describes testing different variations to understand what works best?', options: ['Customer development', 'Pivoting', 'A/B testing', 'Roadmapping'], answer: 'A/B testing' },
       { question: 'When should a startup consider pivoting according to Eric Ries?', options: ['When metrics indicate failure', 'Based on customer feedback and learning', 'After completing full development', 'When investors push for change'], answer: 'Based on customer feedback and learning' },
       { question: 'What is a key benefit of aligning a company\'s values with human flourishing?', options: ['Increases short-term profits', 'Ensures long-term sustainability and trust', 'Reduces the need for innovation', 'Accelerates product launches'], answer: 'Ensures long-term sustainability and trust' },
+      { question: 'How did Eric Ries initially view the impact of his ideas on startup culture?', options: ['He expected widespread influence', 'He doubted they\'d have much impact', 'He thought they\'d be controversial', 'He believed they\'d only be niche'], answer: 'He doubted they\'d have much impact' },
     ],
 },
 
@@ -194,6 +206,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Why is management still critical even as organizational roles flatten?', options: ['To control all decisions', 'To set vision and coordinate resources', 'To perform all operational tasks', 'To eliminate hierarchy'], answer: 'To set vision and coordinate resources' },
       { question: 'What approach is recommended for effectively diagnosing business issues?', options: ['Use intuition alone', 'Use data and analysis', 'Follow gut feelings', 'Ask for executive approval'], answer: 'Use data and analysis' },
       { question: 'Which skill will likely become more valuable for managers as AI tools become prevalent?', options: ['Data interpretation', 'Technical coding', 'Manual problem-solving', 'Multitasking'], answer: 'Data interpretation' },
+      { question: 'What is a useful heuristic for deciding when to rely on data versus intuition in decision-making?', options: ['Trust data always', 'Use intuition for quick decisions', 'Balance data with instinct based on context', 'Ignore data in uncertain situations'], answer: 'Balance data with instinct based on context' },
     ],
 },
   {
@@ -214,6 +227,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'How should a product team approach building features, according to Scott Belsky?', options: ['Build all desired features', 'Focus on minimal features', 'Build only half the features you want', 'Ignore customer feedback'], answer: 'Build only half the features you want' },
       { question: 'What is a recommended mindset when you "lose conviction" in your product?', options: ['Double down on features', 'Pivot or quit', 'Increase marketing efforts', 'Ignore customer feedback'], answer: 'Pivot or quit' },
       { question: 'What is an effective way for product leaders to improve user experience?', options: ['Prioritize technology over design', 'Break down organizational boundaries', 'Focus solely on features', 'Avoid user empathy'], answer: 'Break down organizational boundaries' },
+      { question: 'Which approach best develops strong product sense in PMs?', options: ['Focus on solving solutions', 'Develop empathy for customers', 'Prioritize tech innovation', 'Follow the latest trends'], answer: 'Develop empathy for customers' },
     ],
 },
   {
@@ -234,6 +248,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Why do many sales pitches end up being ineffective?', options: ['They are too brief', 'They lack alignment with positioning', 'They use too many stories', 'They focus only on price'], answer: 'They lack alignment with positioning' },
       { question: 'What is a best practice for testing a sales pitch\'s effectiveness?', options: ['Show all product features first', 'Test live with prospects and refine', 'Use only internal feedback', 'Make it as detailed as possible'], answer: 'Test live with prospects and refine' },
       { question: 'How can storytelling enhance a product sales pitch?', options: ['By making it more entertaining', 'By emphasizing technical details', 'By framing features in terms of customer impact', 'By using complex narratives'], answer: 'By framing features in terms of customer impact' },
+      { question: 'What is a common mistake companies make when positioning their product\'s sales pitch?', options: ['Overemphasizing competitor analysis', 'Providing too much technical detail', 'Presenting a feature-only exposition', 'Ignoring customer stories'], answer: 'Presenting a feature-only exposition' },
     ],
 },
 
@@ -256,6 +271,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'How can one develop good taste in their work?', options: ['Copy top performers', 'Know what others want before they do', 'Take random risks', 'Avoid feedback'], answer: 'Know what others want before they do' },
       { question: 'According to Seth, what signifies high standards in product quality?', options: ['Perfection and luxury', 'Meeting specifications', 'How much you ship', 'Customer complaints'], answer: 'Meeting specifications' },
       { question: 'Which approach helps in building higher standards and better taste?', options: ['Working with high-standard people', 'Ignoring feedback', 'Lowering your standards', 'Focusing only on sales'], answer: 'Working with high-standard people' },
+      { question: 'What is a nuanced way to apply high standards in a project?', options: ['Ship early and often', 'Refuse to ship unless perfect', 'Refine specs continuously', 'Ignore user feedback'], answer: 'Refine specs continuously' },
     ],
 },
   {
@@ -296,6 +312,7 @@ export const FIGHTERS: Fighter[] = [
       { question: 'Which quadrant describes giving candid feedback without showing care?', options: ['Obnoxious aggression', 'Ruined empathy', 'Manipulative insincerity', 'Radical candor'], answer: 'Obnoxious aggression' },
       { question: 'Why is ruinous empathy a common mistake in feedback?', options: ['Because people fear hurting feelings', 'Because it\'s easier than challenging', 'Because it\'s effective for team morale', 'Because it always leads to better results'], answer: 'Because people fear hurting feelings' },
       { question: 'How can a leader effectively use the radical candor framework?', options: ['As a conversation guide', 'To judge people harshly', 'To avoid giving feedback', 'As a strict rule set'], answer: 'As a conversation guide' },
+      { question: 'What is an advanced strategy to improve challenging directly?', options: ['Practice authentic care first', 'Ignore emotional responses', 'Always compliment first', 'Reduce feedback frequency'], answer: 'Practice authentic care first' },
     ],
 },
 

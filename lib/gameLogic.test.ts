@@ -204,7 +204,7 @@ describe('getRandomTrivia', () => {
     expect(questions.size).toBe(3);
   });
 
-  it('resets pool when exhausted', () => {
+  it('resets pool when exhausted (legacy mode without allFighters)', () => {
     const fighter = makeFighter(2);
     const used: Record<string, number[]> = {};
     getRandomTrivia(fighter, used);
@@ -214,5 +214,73 @@ describe('getRandomTrivia', () => {
     getRandomTrivia(fighter, used);
     // After reset, usedIndices should have exactly 1 entry (the newly picked one)
     expect(used['test-fighter']).toHaveLength(1);
+  });
+
+  it('falls back to a different fighter when primary pool is exhausted and allFighters is provided', () => {
+    const primary: Fighter = {
+      id: 'primary',
+      name: 'Primary',
+      title: 'P',
+      type: 'Growth',
+      stats: { hp: 100, atk: 50, def: 50, spd: 50 },
+      moves: [],
+      trivia: [{ question: 'PQ1', options: ['A', 'B', 'C', 'D'], answer: 'A' }],
+      avatar: '',
+    };
+    const fallback: Fighter = {
+      id: 'fallback',
+      name: 'Fallback',
+      title: 'F',
+      type: 'Data',
+      stats: { hp: 100, atk: 50, def: 50, spd: 50 },
+      moves: [],
+      trivia: [
+        { question: 'FQ1', options: ['A', 'B', 'C', 'D'], answer: 'A' },
+        { question: 'FQ2', options: ['A', 'B', 'C', 'D'], answer: 'B' },
+      ],
+      avatar: '',
+    };
+    const allFighters = [primary, fallback];
+    const used: Record<string, number[]> = {};
+
+    // Exhaust primary's pool
+    const q1 = getRandomTrivia(primary, used, allFighters);
+    expect(q1.question).toBe('PQ1');
+
+    // Next call should fall back to the fallback fighter
+    const q2 = getRandomTrivia(primary, used, allFighters);
+    expect(['FQ1', 'FQ2']).toContain(q2.question);
+    // Primary pool should NOT have been reset
+    expect(used['primary']).toHaveLength(1);
+    // Fallback should have one used index
+    expect(used['fallback']).toHaveLength(1);
+  });
+
+  it('resets all pools when every fighter is exhausted', () => {
+    const f1: Fighter = {
+      id: 'f1', name: 'F1', title: 'F', type: 'Growth',
+      stats: { hp: 100, atk: 50, def: 50, spd: 50 }, moves: [],
+      trivia: [{ question: 'Q1', options: ['A', 'B', 'C', 'D'], answer: 'A' }],
+      avatar: '',
+    };
+    const f2: Fighter = {
+      id: 'f2', name: 'F2', title: 'F', type: 'Data',
+      stats: { hp: 100, atk: 50, def: 50, spd: 50 }, moves: [],
+      trivia: [{ question: 'Q2', options: ['A', 'B', 'C', 'D'], answer: 'B' }],
+      avatar: '',
+    };
+    const allFighters = [f1, f2];
+    const used: Record<string, number[]> = {};
+
+    // Exhaust both fighters
+    getRandomTrivia(f1, used, allFighters); // uses f1's Q1
+    getRandomTrivia(f1, used, allFighters); // falls back to f2's Q2
+
+    // Both are now exhausted; next call should reset all pools
+    const q3 = getRandomTrivia(f1, used, allFighters);
+    expect(['Q1', 'Q2']).toContain(q3.question);
+    // At least one pool was reset
+    const totalUsed = (used['f1']?.length || 0) + (used['f2']?.length || 0);
+    expect(totalUsed).toBe(1); // only the one just picked
   });
 });

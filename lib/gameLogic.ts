@@ -134,11 +134,21 @@ export function applyItemStats(
  * Pick a random trivia question for a fighter, avoiding recently-used ones.
  *
  * Mutates `usedIndices` to track which questions have been shown.
- * When all questions for a fighter have been used, the pool resets.
+ *
+ * When `allFighters` is provided and the fighter's own pool is exhausted,
+ * instead of resetting the same fighter's pool, a question is drawn from
+ * a different fighter that still has unused questions. This ensures the
+ * player never sees the same question twice in a match (with 5-9 questions
+ * per fighter x 15 fighters = 75-135 total questions). If ALL fighters are
+ * exhausted, every pool is reset.
+ *
+ * When `allFighters` is omitted, falls back to the original behavior of
+ * resetting the same fighter's pool.
  */
 export function getRandomTrivia(
   fighter: Fighter,
   usedIndices: Record<string, number[]>,
+  allFighters?: Fighter[],
 ): TriviaQuestion {
   const fighterId = fighter.id || fighter.name;
   if (!usedIndices[fighterId]) usedIndices[fighterId] = [];
@@ -147,12 +157,51 @@ export function getRandomTrivia(
   const allIndices = fighter.trivia.map((_, i) => i);
   let available = allIndices.filter(i => !used.includes(i));
 
-  if (available.length === 0) {
-    usedIndices[fighterId] = [];
-    available = allIndices;
+  // Primary fighter still has unused questions — pick from them
+  if (available.length > 0) {
+    const idx = available[Math.floor(Math.random() * available.length)];
+    usedIndices[fighterId].push(idx);
+    return fighter.trivia[idx];
   }
 
+  // Pool exhausted — cross-fighter fallback (if allFighters provided)
+  if (allFighters && allFighters.length > 0) {
+    // Collect all fighters that have unused questions (excluding the primary fighter)
+    const fallbackCandidates: { fighter: Fighter; available: number[] }[] = [];
+    for (const f of allFighters) {
+      const fId = f.id || f.name;
+      if (fId === fighterId) continue; // skip the primary fighter
+      if (!usedIndices[fId]) usedIndices[fId] = [];
+      const fAll = f.trivia.map((_, i) => i);
+      const fAvail = fAll.filter(i => !usedIndices[fId].includes(i));
+      if (fAvail.length > 0) {
+        fallbackCandidates.push({ fighter: f, available: fAvail });
+      }
+    }
+
+    if (fallbackCandidates.length > 0) {
+      // Pick a random fallback fighter, then a random unused question from it
+      const fallback = fallbackCandidates[Math.floor(Math.random() * fallbackCandidates.length)];
+      const fallbackId = fallback.fighter.id || fallback.fighter.name;
+      const idx = fallback.available[Math.floor(Math.random() * fallback.available.length)];
+      usedIndices[fallbackId].push(idx);
+      return fallback.fighter.trivia[idx];
+    }
+
+    // ALL fighters exhausted — reset everything
+    for (const f of allFighters) {
+      const fId = f.id || f.name;
+      usedIndices[fId] = [];
+    }
+  } else {
+    // No allFighters provided — legacy behavior: reset same fighter's pool
+    usedIndices[fighterId] = [];
+  }
+
+  // Pick from the (now-reset) primary fighter
+  available = fighter.trivia.map((_, i) => i);
   const idx = available[Math.floor(Math.random() * available.length)];
+  if (!usedIndices[fighterId]) usedIndices[fighterId] = [];
   usedIndices[fighterId].push(idx);
   return fighter.trivia[idx];
 }

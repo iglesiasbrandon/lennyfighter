@@ -5,6 +5,7 @@ import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats }
 import { ItemSelector } from './ItemSelector';
 import { BattleArena } from './BattleArena';
 import { consumeItem } from '../lib/api';
+import { FIGHTERS } from '../../lib/fighterData';
 import type { Fighter, Move, TriviaQuestion, GameItem, InventoryEntry } from '../../lib/types';
 
 interface BattleViewProps {
@@ -90,7 +91,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
       return restoredGameState as unknown as GameState;
     }
     const usedTriviaIndices: Record<string, number[]> = {};
-    const initialTrivia = getRandomTrivia(player2.fighter, usedTriviaIndices);
+    const initialTrivia = getRandomTrivia(player2.fighter, usedTriviaIndices, FIGHTERS);
     return {
     p1Hp: player1.fighter.stats.hp,
     p2Hp: player2.fighter.stats.hp,
@@ -476,7 +477,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
             if (prev.selectedItem) {
               consumeSelectedItem(prev.selectedItem);
             }
-            const nextTrivia = getRandomTrivia(player2.fighter, prev.usedTriviaIndices);
+            const nextTrivia = getRandomTrivia(player2.fighter, prev.usedTriviaIndices, FIGHTERS);
             // Apply Hook Model to new trivia
             let newEliminated: number | null = null;
             if (prev.selectedItem?.effect === 'eliminate_wrong_answer' && !prev.itemUsed) {
@@ -517,7 +518,7 @@ export function BattleView({ matchData, onMatchEnd, inventory, restoredGameState
           };
         }
 
-        const nextTrivia = getRandomTrivia(player2.fighter, prev.usedTriviaIndices);
+        const nextTrivia = getRandomTrivia(player2.fighter, prev.usedTriviaIndices, FIGHTERS);
 
         // Apply Hook Model to each new trivia question if item not yet consumed
         let newEliminated: number | null = null;

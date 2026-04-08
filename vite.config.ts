@@ -6,7 +6,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { WebSocketServer } from "ws";
 import http from "http";
 import type { Duplex } from "stream";
-import { VALID_FIGHTER_IDS, getFighterById } from "./lib/fighterData";
+import { VALID_FIGHTER_IDS, getFighterById, FIGHTERS } from "./lib/fighterData";
 import { getItemById, VALID_ITEM_IDS } from "./lib/itemData";
 import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats } from './lib/gameLogic';
 import type { Fighter, Move, GameItem } from './lib/types';
@@ -259,7 +259,7 @@ function localMultiplayerWs(): Plugin {
         const defender = defenderSlot === "player1" ? p1 : p2;
 
         // Trivia comes from the opponent's fighter
-        const trivia = getRandomTrivia(defender.fighter, room.state.usedTriviaIndices);
+        const trivia = getRandomTrivia(defender.fighter, room.state.usedTriviaIndices, FIGHTERS);
         room.state.currentTrivia = trivia;
 
         broadcastToRoom(room, {
@@ -848,7 +848,7 @@ function localMultiplayerWs(): Plugin {
                 const nextPlayer = room.state.currentTurn === "player1" ? p1 : p2;
                 const nextOpponent = room.state.currentTurn === "player1" ? p2 : p1;
                 // Trivia comes from the opponent's fighter
-                const trivia = getRandomTrivia(nextOpponent.fighter, room.state.usedTriviaIndices);
+                const trivia = getRandomTrivia(nextOpponent.fighter, room.state.usedTriviaIndices, FIGHTERS);
                 room.state.currentTrivia = trivia;
 
                 // Check if next attacker has an active_use item available
