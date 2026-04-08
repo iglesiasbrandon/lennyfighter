@@ -180,8 +180,10 @@ export function getRandomTrivia(
     }
 
     if (fallbackCandidates.length > 0) {
-      // Pick a random fallback fighter, then a random unused question from it
-      const fallback = fallbackCandidates[Math.floor(Math.random() * fallbackCandidates.length)];
+      // Prefer same-type fighters before falling back to other types
+      const sameType = fallbackCandidates.filter(c => c.fighter.type === fighter.type);
+      const pool = sameType.length > 0 ? sameType : fallbackCandidates;
+      const fallback = pool[Math.floor(Math.random() * pool.length)];
       const fallbackId = fallback.fighter.id || fallback.fighter.name;
       const idx = fallback.available[Math.floor(Math.random() * fallback.available.length)];
       usedIndices[fallbackId].push(idx);
