@@ -1,5 +1,5 @@
 import { getEnv } from '../../../../lib/env';
-import { successResponse, errorResponse } from '../../../../lib/utils';
+import { successResponse, errorResponse, getPlayerIdByGamertag } from '../../../../lib/utils';
 import { getAllItems, getItemById, VALID_ITEM_IDS } from '../../../../lib/itemData';
 
 const MAX_ITEM_QUANTITY = 3;
@@ -49,21 +49,17 @@ export async function POST(request: Request) {
   }
 
   // Look up the player record to get player_id for inventory
-  const player = await env.DB.prepare(
-    'SELECT id FROM players WHERE username = ?'
-  ).bind(body.gamertag).first<{ id: string }>();
+  let playerId = await getPlayerIdByGamertag(env.DB, body.gamertag);
 
-  if (!player) {
+  if (!playerId) {
     // Auto-create a player record for this gamertag
-    const playerId = crypto.randomUUID();
+    playerId = crypto.randomUUID();
     await env.DB.prepare(
       'INSERT INTO players (id, username) VALUES (?, ?)'
     ).bind(playerId, body.gamertag).run();
-
-    return await completePurchase(env, playerId, body.gamertag, item, statsRow.lennycoins);
   }
 
-  return await completePurchase(env, player.id, body.gamertag, item, statsRow.lennycoins);
+  return await completePurchase(env, playerId, body.gamertag, item, statsRow.lennycoins);
 }
 
 async function completePurchase(

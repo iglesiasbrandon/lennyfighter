@@ -231,26 +231,28 @@ export function useMatchmaking(fighter: Fighter | null, initialMatchInfo?: Match
   return { state, matchInfo, joinQueue, cancelQueue, reset };
 }
 
+const INITIAL_BATTLE_STATE: MultiplayerBattleState = {
+  mySlot: 'player1',
+  player1: null,
+  player2: null,
+  currentTurn: 'player1',
+  turnNumber: 0,
+  trivia: null,
+  status: 'waiting',
+  lastTurnResult: null,
+  winner: null,
+  winReason: null,
+  coinsAwarded: 0,
+  coinsTaken: 0,
+  itemSelectionPhase: false,
+  canUseItem: false,
+  itemActivated: null,
+  wagerPhase: false, wagerAmount: 0, wagerMaxAmount: 0, wagerProposerSlot: null,
+  wagerAwaitingResponse: false, wagerProposedAmount: null, player1Balance: 0, player2Balance: 0,
+};
+
 export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | null, itemsAllowed?: boolean) {
-  const [battleState, setBattleState] = useState<MultiplayerBattleState>({
-    mySlot: 'player1',
-    player1: null,
-    player2: null,
-    currentTurn: 'player1',
-    turnNumber: 0,
-    trivia: null,
-    status: 'waiting',
-    lastTurnResult: null,
-    winner: null,
-    winReason: null,
-    coinsAwarded: 0,
-    coinsTaken: 0,
-    itemSelectionPhase: false,
-    canUseItem: false,
-    itemActivated: null,
-    wagerPhase: false, wagerAmount: 0, wagerMaxAmount: 0, wagerProposerSlot: null,
-    wagerAwaitingResponse: false, wagerProposedAmount: null, player1Balance: 0, player2Balance: 0,
-  });
+  const [battleState, setBattleState] = useState<MultiplayerBattleState>({ ...INITIAL_BATTLE_STATE });
 
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
@@ -278,25 +280,7 @@ export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | nul
     answerSentRef.current = false;
 
     // Reset battle state for the new match — prevents showing stale results from previous match
-    setBattleState({
-      mySlot: 'player1',
-      player1: null,
-      player2: null,
-      currentTurn: 'player1',
-      turnNumber: 0,
-      trivia: null,
-      status: 'waiting',
-      lastTurnResult: null,
-      winner: null,
-      winReason: null,
-      coinsAwarded: 0,
-      coinsTaken: 0,
-      itemSelectionPhase: false,
-      canUseItem: false,
-      itemActivated: null,
-      wagerPhase: false, wagerAmount: 0, wagerMaxAmount: 0, wagerProposerSlot: null,
-      wagerAwaitingResponse: false, wagerProposedAmount: null, player1Balance: 0, player2Balance: 0,
-    });
+    setBattleState({ ...INITIAL_BATTLE_STATE });
     setConnected(false);
 
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

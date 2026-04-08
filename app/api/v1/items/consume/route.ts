@@ -1,5 +1,5 @@
 import { getEnv } from '../../../../../lib/env';
-import { successResponse, errorResponse } from '../../../../../lib/utils';
+import { successResponse, errorResponse, getPlayerIdByGamertag } from '../../../../../lib/utils';
 import { VALID_ITEM_IDS } from '../../../../../lib/itemData';
 
 /**
@@ -26,11 +26,9 @@ export async function POST(request: Request) {
   }
 
   // Look up player_id from gamertag
-  const player = await env.DB.prepare(
-    'SELECT id FROM players WHERE username = ?'
-  ).bind(body.gamertag).first<{ id: string }>();
+  const playerId = await getPlayerIdByGamertag(env.DB, body.gamertag);
 
-  if (!player) {
+  if (!playerId) {
     return errorResponse('PLAYER_NOT_FOUND', 'Player not found', 404);
   }
 
@@ -39,7 +37,7 @@ export async function POST(request: Request) {
   // we only decrement if there's stock, and meta.changes tells us if it worked.
   const result = await env.DB.prepare(
     'UPDATE player_items SET quantity = quantity - 1 WHERE player_id = ? AND item_id = ? AND quantity > 0'
-  ).bind(player.id, body.item_id).run();
+  ).bind(playerId, body.item_id).run();
 
   if (result.meta.changes === 0) {
     return errorResponse('NO_ITEM', 'You do not own this item', 400);
@@ -48,7 +46,7 @@ export async function POST(request: Request) {
   // Get the new quantity for the response
   const updated = await env.DB.prepare(
     'SELECT quantity FROM player_items WHERE player_id = ? AND item_id = ?'
-  ).bind(player.id, body.item_id).first<{ quantity: number }>();
+  ).bind(playerId, body.item_id).first<{ quantity: number }>();
 
   return successResponse({
     item_id: body.item_id,

@@ -36,7 +36,7 @@ export function getTypeMultiplier(attackType: string, defenderType: string): num
 // ---- Damage Calculation ----
 
 /** Minimal stats shape accepted by calculateDamage. */
-export interface CombatantStats {
+interface CombatantStats {
   atk: number;
   def: number;
 }
@@ -82,7 +82,7 @@ export function calculateDamage(
 // ---- Self-Damage Calculation ----
 
 /** The fraction of move power dealt as self-damage on a wrong answer. */
-export const SELF_DAMAGE_FRACTION = 0.5;
+const SELF_DAMAGE_FRACTION = 0.5;
 
 /**
  * Calculate the self-damage (recoil) a player takes for answering incorrectly.

@@ -124,6 +124,29 @@ export class MatchRoom extends DurableObject<Env> {
     try { ws.send(JSON.stringify(message)); } catch { /* disconnected */ }
   }
 
+  /** Build a match_start message payload from current state. */
+  private buildMatchStartPayload(state: MatchState, turnNumber?: number): Record<string, unknown> {
+    return {
+      type: 'match_start',
+      player1: {
+        id: state.player1!.id,
+        username: state.player1!.username,
+        fighter: state.player1!.fighter,
+        hp: state.player1!.currentHp,
+        itemName: state.player1!.selectedItem?.name || null,
+      },
+      player2: {
+        id: state.player2!.id,
+        username: state.player2!.username,
+        fighter: state.player2!.fighter,
+        hp: state.player2!.currentHp,
+        itemName: state.player2!.selectedItem?.name || null,
+      },
+      currentTurn: state.currentTurn,
+      turnNumber: turnNumber ?? 1,
+    };
+  }
+
   /**
    * Record match result in D1: upsert winner/loser stats + LennyCoin transfer.
    * Called server-side when a match ends, replacing the old unauthenticated POST /api/v1/stats endpoint.
@@ -371,26 +394,7 @@ export class MatchRoom extends DurableObject<Env> {
     const trivia = getRandomTrivia(defender.fighter, state.usedTriviaIndices);
     state.currentTrivia = trivia;
 
-    this.broadcast({
-      type: 'match_start',
-      player1: {
-        id: state.player1!.id,
-        username: state.player1!.username,
-        fighter: state.player1!.fighter,
-        hp: state.player1!.currentHp,
-        itemName: state.player1!.selectedItem?.name || null,
-      },
-      player2: {
-        id: state.player2!.id,
-        username: state.player2!.username,
-        fighter: state.player2!.fighter,
-        hp: state.player2!.currentHp,
-        itemName: state.player2!.selectedItem?.name || null,
-      },
-      currentTurn: state.currentTurn,
-      turnNumber: 1,
-      wagerAmount: state.wagerAmount || 0,
-    });
+    this.broadcast({ ...this.buildMatchStartPayload(state), wagerAmount: state.wagerAmount || 0 });
 
     // Check if active player has an unused active_use item
     const attacker = state[attackerSlot]!;
@@ -538,25 +542,7 @@ export class MatchRoom extends DurableObject<Env> {
 
       if (isReconnect && state.status === 'active' && state.player1 && state.player2) {
         // Re-send current match state to the reconnected player
-        this.sendToWs(server, {
-          type: 'match_start',
-          player1: {
-            id: state.player1.id,
-            username: state.player1.username,
-            fighter: state.player1.fighter,
-            hp: state.player1.currentHp,
-            itemName: state.player1.selectedItem?.name || null,
-          },
-          player2: {
-            id: state.player2.id,
-            username: state.player2.username,
-            fighter: state.player2.fighter,
-            hp: state.player2.currentHp,
-            itemName: state.player2.selectedItem?.name || null,
-          },
-          currentTurn: state.currentTurn,
-          turnNumber: state.turnNumber,
-        });
+        this.sendToWs(server, this.buildMatchStartPayload(state, state.turnNumber));
 
         // If it's the reconnected player's turn, re-send trivia
         if (state.currentTurn === slot && state.currentTrivia) {
