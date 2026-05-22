@@ -36,6 +36,7 @@ import type { Env } from "../lib/types";
 // Re-export Durable Objects so Cloudflare can instantiate them
 export { MatchRoom } from "../durableObjects/MatchRoom";
 export { MatchmakingQueue } from "../durableObjects/MatchmakingQueue";
+export { TournamentRoom } from "../durableObjects/TournamentRoom";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -75,6 +76,15 @@ export default {
         const matchId = matchWsMatch[1];
         const id = env.MATCH_ROOM.idFromName(matchId);
         const stub = env.MATCH_ROOM.get(id);
+        return stub.fetch(authedRequest);
+      }
+
+      // WebSocket: tournament room (per-code)
+      const tournamentWsMatch = url.pathname.match(/^\/ws\/tournament\/(.+)$/);
+      if (tournamentWsMatch) {
+        const code = tournamentWsMatch[1];
+        const id = env.TOURNAMENT.idFromName(code);
+        const stub = env.TOURNAMENT.get(id);
         return stub.fetch(authedRequest);
       }
     }

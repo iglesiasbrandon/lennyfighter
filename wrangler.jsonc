@@ -41,6 +41,10 @@
       {
         "name": "MATCHMAKING_QUEUE",
         "class_name": "MatchmakingQueue"
+      },
+      {
+        "name": "TOURNAMENT",
+        "class_name": "TournamentRoom"
       }
     ]
   },
@@ -52,12 +56,18 @@
 
   "migrations": [
     {
+      // PlayerWallet listed here so the v2 delete below targets a class the
+      // migration chain actually created — keeps local Miniflare consistent.
       "tag": "v1",
-      "new_sqlite_classes": ["MatchRoom", "MatchmakingQueue"]
+      "new_sqlite_classes": ["MatchRoom", "MatchmakingQueue", "PlayerWallet"]
     },
     {
       "tag": "v2",
       "deleted_classes": ["PlayerWallet"]  // Removed in payment system cleanup (2026-03)
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["TournamentRoom"]  // Tournament mode
     }
   ]
 }

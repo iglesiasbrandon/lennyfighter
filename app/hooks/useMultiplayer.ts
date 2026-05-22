@@ -251,7 +251,7 @@ const INITIAL_BATTLE_STATE: MultiplayerBattleState = {
   wagerAwaitingResponse: false, wagerProposedAmount: null, player1Balance: 0, player2Balance: 0,
 };
 
-export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | null, itemsAllowed?: boolean) {
+export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | null, itemsAllowed?: boolean, tournamentCode?: string) {
   const [battleState, setBattleState] = useState<MultiplayerBattleState>({ ...INITIAL_BATTLE_STATE });
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -308,7 +308,8 @@ export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | nul
       }
 
       const devParam = isDev ? `&gamertag=${encodeURIComponent(getGamertag() || '')}` : '';
-      const url = `${proto}//${wsHost}/ws/match/${matchInfo.matchId}?token=${token}&fighterId=${fighter.id}${itemsParam}${devParam}`;
+      const tournamentParam = tournamentCode ? `&tournamentCode=${encodeURIComponent(tournamentCode)}` : '';
+      const url = `${proto}//${wsHost}/ws/match/${matchInfo.matchId}?token=${token}&fighterId=${fighter.id}${itemsParam}${tournamentParam}${devParam}`;
 
       const ws = new WebSocket(url);
       wsRef.current = ws;
@@ -497,7 +498,7 @@ export function useMatchRoom(matchInfo: MatchInfo | null, fighter: Fighter | nul
         wsRef.current = null;
       }
     };
-  }, [matchInfo, fighter, itemsAllowed]);
+  }, [matchInfo, fighter, itemsAllowed, tournamentCode]);
 
   const sendAnswer = useCallback((answer: string, moveIndex: number) => {
     if (answerSentRef.current) return; // Block duplicate answers in the same turn

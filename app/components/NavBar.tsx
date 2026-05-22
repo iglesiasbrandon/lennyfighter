@@ -50,6 +50,7 @@ export function NavBar() {
       <a href="/" className="nav-brand">LENNYFIGHTER</a>
       <ul className="nav-links">
         <li><a href="/lobby">Play</a></li>
+        <li><a href="/tournament">Tournament</a></li>
         <li><a href="/lobby?shop=1">Shop</a></li>
         <li><a href="/leaderboard">Leaderboard</a></li>
         <li><a href="/about">About</a></li>

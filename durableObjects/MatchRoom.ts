@@ -39,6 +39,8 @@ interface MatchState {
   wagerMaxAmount?: number;
   player1Balance?: number;
   player2Balance?: number;
+  /** If set, this match belongs to a tournament — result is reported to the TournamentRoom DO. */
+  tournamentCode?: string;
 }
 
 /**
@@ -285,6 +287,36 @@ export class MatchRoom extends DurableObject<Env> {
       coinsAwarded,
       coinsTaken,
     });
+
+    // If this is a tournament match, report the result so the bracket advances.
+    // waitUntil so a slow TournamentRoom never blocks match_end / cleanup.
+    if (state.tournamentCode) {
+      this.ctx.waitUntil(
+        this.reportToTournament(state.tournamentCode, state.id, winnerId),
+      );
+    }
+  }
+
+  /**
+   * Report a finished tournament match's winner to the TournamentRoom DO,
+   * which advances the bracket. Best-effort — failures are logged, and the
+   * TournamentRoom's no-show alarm is the backstop if this never lands.
+   */
+  private async reportToTournament(
+    code: string,
+    tournamentMatchId: string,
+    winnerGamertag: string,
+  ): Promise<void> {
+    try {
+      const stub = this.env.TOURNAMENT.get(this.env.TOURNAMENT.idFromName(code));
+      await stub.fetch('https://do/internal/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentMatchId, winnerGamertag }),
+      });
+    } catch (err) {
+      console.error('Failed to report tournament result:', err);
+    }
   }
 
   /**
@@ -438,6 +470,7 @@ export class MatchRoom extends DurableObject<Env> {
       const verifiedGamertag = url.searchParams.get('verifiedGamertag');
       const fighterId = url.searchParams.get('fighterId');
       const itemsAllowed = url.searchParams.get('itemsAllowed') === 'true';
+      const tournamentCode = url.searchParams.get('tournamentCode');
 
       if (!verifiedGamertag || !fighterId) {
         return new Response('Missing player data', { status: 400 });
@@ -464,6 +497,12 @@ export class MatchRoom extends DurableObject<Env> {
       // If the first player to connect passes itemsAllowed, set it on state
       if (itemsAllowed && !state.player1 && !state.player2) {
         state.itemsAllowed = true;
+      }
+
+      // If the first player to connect passes a tournament code, this match
+      // belongs to a tournament — record it so the result is reported back.
+      if (tournamentCode && !state.player1 && !state.player2) {
+        state.tournamentCode = tournamentCode;
       }
 
       // If this match already finished, reset state for a fresh match.

@@ -9,7 +9,8 @@ import type { Duplex } from "stream";
 import { VALID_FIGHTER_IDS, getFighterById, FIGHTERS } from "./lib/fighterData";
 import { getItemById, VALID_ITEM_IDS } from "./lib/itemData";
 import { calculateDamage, getRandomTrivia, calculateSelfDamage, applyItemStats } from './lib/gameLogic';
-import type { Fighter, Move, GameItem } from './lib/types';
+import { seedBracket, applyResultToBracket, isValidBracketSize } from './lib/bracket';
+import type { Fighter, Move, GameItem, TournamentState, BracketSize } from './lib/types';
 
 // Prevent unhandled rejections from crashing the dev server
 function catchRejections(): Plugin {
@@ -70,6 +71,7 @@ function localMultiplayerWs(): Plugin {
       interface MatchRoom {
         id: string;
         players: Map<string, MatchPlayer>;
+        tournamentCode?: string;
         state: {
           currentTurn: "player1" | "player2";
           turnNumber: number;
@@ -97,6 +99,65 @@ function localMultiplayerWs(): Plugin {
       const matchRooms = new Map<string, MatchRoom>();
       // Grace period timers for reconnecting players (React strict mode double-mounts)
       const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+      // ---- Tournament rooms ----
+      // In-process replica of the production TournamentRoom Durable Object.
+      // Holds the shared TournamentState plus live sockets and no-show deadlines.
+      interface TournamentRoom {
+        state: TournamentState;
+        sockets: Map<string, import("ws").WebSocket>;
+        noshow: Record<string, number>;
+      }
+      const tournamentRooms = new Map<string, TournamentRoom>();
+      // No-show deadline window for an unfinished round match (ms).
+      const NOSHOW_MS = 300_000;
+
+      function broadcastTournament(room: TournamentRoom) {
+        const data = JSON.stringify({ type: "state", state: room.state });
+        for (const ws of room.sockets.values()) {
+          if (ws.readyState === 1) {
+            try { ws.send(data); } catch {}
+          }
+        }
+      }
+
+      /**
+       * Apply a determined match result to a tournament bracket (in-process,
+       * no network). Handles champion + newly-ready advancement, registers
+       * no-show deadlines, marks the loser eliminated, and broadcasts state.
+       * Shared by the report path and the in-room start logic.
+       */
+      function applyTournamentResult(code: string, matchId: string, winner: string) {
+        const room = tournamentRooms.get(code);
+        if (!room) return;
+        const match = room.state.matches.find((m) => m.matchId === matchId);
+        // Identify the loser before the result mutates the match.
+        const loser = match
+          ? (match.p1 === winner ? match.p2 : match.p1)
+          : null;
+
+        const result = applyResultToBracket(room.state.matches, matchId, winner);
+        if (!result.resolved) return; // unknown / already done / invalid winner
+
+        // Mark the loser's roster entry eliminated.
+        if (loser) {
+          const loserEntry = room.state.roster.find((p) => p.gamertag === loser);
+          if (loserEntry) loserEntry.eliminated = true;
+        }
+
+        // No more no-show pressure on the resolved match.
+        delete room.noshow[matchId];
+
+        if (result.champion) {
+          room.state.status = "finished";
+          room.state.champion = result.champion;
+        }
+        if (result.newlyReady) {
+          room.noshow[result.newlyReady.matchId] = Date.now() + NOSHOW_MS;
+        }
+
+        broadcastTournament(room);
+      }
 
       function tryMatch() {
         if (queue.length < 2) return;
@@ -368,6 +429,7 @@ function localMultiplayerWs(): Plugin {
             const username = gamertag;
             console.log(`[match-room] Player ${username} connecting to ${matchId}`);
             const fighterId = url.searchParams.get("fighterId") || "";
+            const tournamentCode = url.searchParams.get("tournamentCode") || undefined;
 
             // Validate fighterId and look up the full fighter data server-side
             const fighter = getFighterById(fighterId);
@@ -381,6 +443,7 @@ function localMultiplayerWs(): Plugin {
               matchRooms.set(matchId, {
                 id: matchId,
                 players: new Map(),
+                tournamentCode,
                 state: {
                   currentTurn: "player1",
                   turnNumber: 0,
@@ -837,6 +900,11 @@ function localMultiplayerWs(): Plugin {
                     coinsTaken: 0,
                     wagerAmount: room.state.wagerAmount || 0,
                   });
+                  // Tournament report: in the local match server the player id IS
+                  // the gamertag, so winnerId is the winning gamertag directly.
+                  if (room.tournamentCode && winnerId) {
+                    applyTournamentResult(room.tournamentCode, matchId, winnerId);
+                  }
                   // Cleanup after a delay
                   setTimeout(() => matchRooms.delete(matchId), 10000);
                   return;
@@ -923,6 +991,10 @@ function localMultiplayerWs(): Plugin {
                         coinsTaken: 0,
                         wagerAmount: room.state.wagerAmount || 0,
                       });
+                      // Tournament report on forfeit: the surviving player wins.
+                      if (room.tournamentCode) {
+                        applyTournamentResult(room.tournamentCode, matchId, remaining.id);
+                      }
                     }
                   }
                   if (room.players.size === 0) {
@@ -937,10 +1009,171 @@ function localMultiplayerWs(): Plugin {
           });
           return;
         }
+
+        const tournamentWs = url.pathname.match(/^\/ws\/tournament\/(.+)$/);
+        if (tournamentWs) {
+          wss.handleUpgrade(req, socket, head, (ws) => {
+            const code = tournamentWs[1];
+            const gamertag = url.searchParams.get("gamertag") || url.searchParams.get("playerId") || "anonymous";
+            const fighterId = url.searchParams.get("fighterId") || "";
+            console.log(`[tournament] Player ${gamertag} connecting to ${code}`);
+
+            // Validate fighter — dev is lenient: just require a non-empty id.
+            if (!fighterId) {
+              ws.close(4002, "Invalid fighter ID");
+              return;
+            }
+
+            // First connector to a code creates the room.
+            let room = tournamentRooms.get(code);
+            if (!room) {
+              room = {
+                state: {
+                  code,
+                  adminGamertag: gamertag,
+                  status: "lobby",
+                  bracketSize: 8,
+                  roster: [{ gamertag, fighterId, connected: true, eliminated: false }],
+                  matches: [],
+                  champion: null,
+                  createdAt: Date.now(),
+                },
+                sockets: new Map(),
+                noshow: {},
+              };
+              tournamentRooms.set(code, room);
+              console.log(`[tournament] Room ${code} created by admin ${gamertag}`);
+            } else {
+              const existing = room.state.roster.find((p) => p.gamertag === gamertag);
+              if (existing) {
+                // Reconnect: replace socket, mark connected.
+                existing.connected = true;
+              } else if (room.state.status !== "lobby") {
+                ws.close(4003, "Tournament already started");
+                return;
+              } else if (room.state.roster.length >= room.state.bracketSize) {
+                ws.close(4004, "Tournament full");
+                return;
+              } else {
+                // New joiner in lobby: append to roster.
+                room.state.roster.push({ gamertag, fighterId, connected: true, eliminated: false });
+                console.log(`[tournament] Player ${gamertag} joined ${code} (${room.state.roster.length} players)`);
+              }
+            }
+
+            room.sockets.set(gamertag, ws);
+
+            // Greet the joiner, send them current state, then broadcast to all.
+            sendTo(ws, { type: "tournament_joined", code, yourGamertag: gamertag });
+            sendTo(ws, { type: "state", state: room.state });
+            broadcastTournament(room);
+
+            ws.on("message", (raw) => {
+              try {
+                const msg = JSON.parse(raw.toString());
+                const tRoom = tournamentRooms.get(code);
+                if (!tRoom) return;
+                const isAdmin = tRoom.state.adminGamertag === gamertag;
+                const inLobby = tRoom.state.status === "lobby";
+
+                if (msg.type === "request_state") {
+                  sendTo(ws, { type: "state", state: tRoom.state });
+                  return;
+                }
+
+                if (msg.type === "set_bracket_size") {
+                  if (!isAdmin || !inLobby) return;
+                  if (!isValidBracketSize(msg.size)) {
+                    sendTo(ws, { type: "error", message: "Invalid bracket size" });
+                    return;
+                  }
+                  tRoom.state.bracketSize = msg.size as BracketSize;
+                  broadcastTournament(tRoom);
+                  return;
+                }
+
+                if (msg.type === "start") {
+                  if (!isAdmin || !inLobby) return;
+                  const n = tRoom.state.roster.length;
+                  if (!isValidBracketSize(n)) {
+                    sendTo(ws, { type: "error", message: "Need 4, 8, or 16 players to start" });
+                    return;
+                  }
+                  tRoom.state.bracketSize = n as BracketSize;
+                  tRoom.state.matches = seedBracket(
+                    tRoom.state.roster.map((p) => p.gamertag),
+                    code,
+                  );
+                  tRoom.state.status = "in_progress";
+                  // Register no-show deadlines for every round-0 match.
+                  const now = Date.now();
+                  for (const m of tRoom.state.matches) {
+                    if (m.round === 0) tRoom.noshow[m.matchId] = now + NOSHOW_MS;
+                  }
+                  console.log(`[tournament] ${code} started with ${n} players`);
+                  broadcastTournament(tRoom);
+                  return;
+                }
+              } catch (err) {
+                console.error("[tournament] message error:", err);
+              }
+            });
+
+            ws.on("close", () => {
+              const tRoom = tournamentRooms.get(code);
+              if (!tRoom) return;
+              // Only act if this socket is still the registered one.
+              if (tRoom.sockets.get(gamertag) === ws) {
+                tRoom.sockets.delete(gamertag);
+              }
+              if (tRoom.state.status === "lobby") {
+                // Lobby: remove from roster; promote roster[0] if the admin left.
+                const idx = tRoom.state.roster.findIndex((p) => p.gamertag === gamertag);
+                if (idx >= 0) tRoom.state.roster.splice(idx, 1);
+                if (tRoom.state.adminGamertag === gamertag) {
+                  tRoom.state.adminGamertag = tRoom.state.roster[0]?.gamertag ?? null;
+                }
+              } else {
+                // Started: keep them in the bracket, just mark disconnected.
+                const entry = tRoom.state.roster.find((p) => p.gamertag === gamertag);
+                if (entry) entry.connected = false;
+              }
+              console.log(`[tournament] Player ${gamertag} disconnected from ${code}`);
+              broadcastTournament(tRoom);
+            });
+          });
+          return;
+        }
       });
 
       // Periodic matchmaking
       setInterval(tryMatch, 3000);
+
+      // Periodic no-show sweep: force-advance any ready, unfinished tournament
+      // match whose deadline has passed. Simpler than DO alarms — dev only.
+      setInterval(() => {
+        const now = Date.now();
+        for (const [code, room] of tournamentRooms) {
+          if (room.state.status !== "in_progress") continue;
+          for (const m of room.state.matches) {
+            if (m.status !== "ready") continue;
+            const deadline = room.noshow[m.matchId];
+            if (deadline === undefined || now < deadline) continue;
+            // Pick a winner: prefer a connected participant, else fall back to p1.
+            const isConnected = (g: string | null) =>
+              !!g && !!room.state.roster.find((p) => p.gamertag === g && p.connected);
+            const winner = isConnected(m.p1)
+              ? m.p1
+              : isConnected(m.p2)
+                ? m.p2
+                : m.p1;
+            if (winner) {
+              console.log(`[tournament] No-show on ${m.matchId} in ${code} → ${winner} advances`);
+              applyTournamentResult(code, m.matchId, winner);
+            }
+          }
+        }
+      }, 10_000);
     },
   };
 }

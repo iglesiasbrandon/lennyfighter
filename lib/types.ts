@@ -52,6 +52,50 @@ export interface InventoryEntry {
   quantity: number;
 }
 
+// ---- Tournament ----
+export type BracketSize = 4 | 8 | 16;
+export type TournamentStatus = 'lobby' | 'in_progress' | 'finished';
+export type MatchSlotStatus = 'pending' | 'ready' | 'active' | 'done';
+
+/** A single match slot in a single-elimination bracket. Stored flat. */
+export interface BracketMatch {
+  /** Pre-generated id used to address the MatchRoom DO (idFromName). */
+  matchId: string;
+  /** 0-based round index (0 = first round). */
+  round: number;
+  /** Position of this match within its round. */
+  indexInRound: number;
+  /** Participant gamertags, null until decided. */
+  p1: string | null;
+  p2: string | null;
+  /** Winner gamertag, null until the match is done. */
+  winner: string | null;
+  status: MatchSlotStatus;
+  /** Flat index of the next-round match the winner advances into (null = final). */
+  advancesTo: number | null;
+  /** Which slot of the next match the winner fills. */
+  advancesToSlot: 'p1' | 'p2' | null;
+}
+
+export interface TournamentPlayer {
+  gamertag: string;
+  fighterId: string;
+  connected: boolean;
+  eliminated: boolean;
+}
+
+/** Full tournament state — used for both DO storage and the `state_sync` wire message. */
+export interface TournamentState {
+  code: string;
+  adminGamertag: string | null;
+  status: TournamentStatus;
+  bracketSize: BracketSize;
+  roster: TournamentPlayer[];
+  matches: BracketMatch[];
+  champion: string | null;
+  createdAt: number;
+}
+
 // ---- API Response Envelope ----
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -73,6 +117,7 @@ export interface Env {
   KV: KVNamespace;
   MATCH_ROOM: DurableObjectNamespace;
   MATCHMAKING_QUEUE: DurableObjectNamespace;
+  TOURNAMENT: DurableObjectNamespace;
   ASSETS: Fetcher;
   IMAGES: {
     input(stream: ReadableStream): {
